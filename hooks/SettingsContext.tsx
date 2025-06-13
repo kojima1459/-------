@@ -16,6 +16,11 @@ interface SettingsContextType {
   setDarkModeEnabled: (enabled: boolean) => void;
   saveHistoryEnabled: boolean;
   setSaveHistoryEnabled: (enabled: boolean) => void;
+  // 新しい設定項目
+  customHashtags: string[];
+  setCustomHashtags: (hashtags: string[]) => void;
+  customLink: string;
+  setCustomLink: (link: string) => void;
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -32,6 +37,8 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
   const [lpLinkEnabled, setLpLinkEnabled] = useState<boolean>(true);
   const [darkModeEnabled, setDarkModeEnabled] = useState<boolean>(false);
   const [saveHistoryEnabled, setSaveHistoryEnabled] = useState<boolean>(true);
+  const [customHashtags, setCustomHashtags] = useState<string[]>([]);
+  const [customLink, setCustomLink] = useState<string>('https://rephrase-master.com');
 
   const resetDailyCount = () => {
     setRephraseCount(0);
@@ -53,7 +60,11 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       darkModeEnabled,
       setDarkModeEnabled,
       saveHistoryEnabled,
-      setSaveHistoryEnabled
+      setSaveHistoryEnabled,
+      customHashtags,
+      setCustomHashtags,
+      customLink,
+      setCustomLink
     }}>
       {children}
     </SettingsContext.Provider>

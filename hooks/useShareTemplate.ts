@@ -1,4 +1,5 @@
 import { useSettings } from './SettingsContext';
+import { getShareTemplate, DEFAULT_HASHTAGS, DEFAULT_LINK } from '@/config/shareTemplates';
 
 interface ShareTemplateOptions {
   text: string;
@@ -6,93 +7,39 @@ interface ShareTemplateOptions {
   platform?: 'twitter' | 'line' | 'instagram' | 'tiktok' | 'general';
 }
 
-const STYLE_HASHTAGS: { [key: string]: string } = {
-  'meigen': '#名言風',
-  'menhera': '#メンヘラ風', 
-  'chuunibyou': '#厨二病風',
-  'keigo': '#敬語風',
-  'kansai': '#関西弁風',
-  'poet': '#詩人風',
-  'business': '#ビジネス風',
-  'gyaru': '#ギャル風',
-};
-
-const LP_LINK = 'https://rephrase-master.app';
-
 export function useShareTemplate() {
-  const { isPro, shareTagsEnabled, lpLinkEnabled } = useSettings();
+  const { 
+    isPro, 
+    shareTagsEnabled, 
+    lpLinkEnabled, 
+    customHashtags = [],
+    customLink = DEFAULT_LINK
+  } = useSettings();
 
   const generateTemplate = ({ text, style, platform = 'general' }: ShareTemplateOptions): string => {
-    let content = text;
-    
-    // Pro版でタグ無効の場合
-    const shouldShowTags = isPro ? shareTagsEnabled : true;
-    const shouldShowLpLink = isPro ? lpLinkEnabled : true;
+    const baseTemplate = getShareTemplate(platform, isPro);
+    let content = baseTemplate.replace('{text}', text);
 
-    // タグを生成
-    if (shouldShowTags) {
-      const appTag = '#RephraseMaster';
-      const styleTag = STYLE_HASHTAGS[style] || `#${style}風`;
-      const tags = `${appTag} ${styleTag}`;
-      content = `${content}\n\n${tags}`;
+    // Pro版でカスタマイズが無効の場合、または無料版の場合は強制付与
+    if (!isPro || (isPro && shareTagsEnabled)) {
+      const hashtags = isPro && customHashtags.length > 0 
+        ? customHashtags 
+        : DEFAULT_HASHTAGS[platform] || DEFAULT_HASHTAGS.general;
+      
+      if (hashtags.length > 0 && !content.includes('#')) {
+        content += '\n\n' + hashtags.join(' ');
+      }
     }
 
-    // LPリンクを追加
-    if (shouldShowLpLink) {
-      content = `${content}\n\n${LP_LINK}`;
+    // リンク付与
+    if (!isPro || (isPro && lpLinkEnabled)) {
+      const link = isPro ? customLink : DEFAULT_LINK;
+      if (!content.includes('http') && link) {
+        content += '\n\n' + link;
+      }
     }
 
-    // プラットフォーム別の最適化
-    switch (platform) {
-      case 'twitter':
-        // Twitterは文字数制限を考慮
-        const maxLength = 280;
-        if (content.length <= maxLength) {
-          return content;
-        }
-        // 文字数オーバーの場合はテキストを調整
-        const overageAmount = content.length - maxLength;
-        const baseTextReduction = overageAmount + 3; // "..."分
-        const availableTextLength = text.length - baseTextReduction;
-        
-        if (availableTextLength > 10) { // 最低限の文字数を確保
-          const truncatedText = text.substring(0, availableTextLength) + '...';
-          let result = truncatedText;
-          
-          if (shouldShowTags) {
-            const appTag = '#RephraseMaster';
-            const styleTag = STYLE_HASHTAGS[style] || `#${style}風`;
-            result = `${result}\n\n${appTag} ${styleTag}`;
-          }
-          
-          if (shouldShowLpLink) {
-            result = `${result}\n\n${LP_LINK}`;
-          }
-          
-          return result;
-        }
-        return content; // フォールバック
-        
-      case 'line':
-        return content;
-        
-      case 'instagram':
-        // Instagramはハッシュタグを強調
-        if (shouldShowTags && shouldShowLpLink) {
-          return `${text}\n\n・\n#RephraseMaster ${STYLE_HASHTAGS[style] || `#${style}風`}\n\n✨AI文章言い換えアプリで生成✨\n${LP_LINK}`;
-        } else if (shouldShowTags) {
-          return `${text}\n\n・\n#RephraseMaster ${STYLE_HASHTAGS[style] || `#${style}風`}\n\n✨AI文章言い換えアプリで生成✨`;
-        } else if (shouldShowLpLink) {
-          return `${text}\n\n✨AI文章言い換えアプリで生成✨\n${LP_LINK}`;
-        }
-        return `${text}\n\n✨AI文章言い換えアプリで生成✨`;
-        
-      case 'tiktok':
-        return content;
-        
-      default:
-        return content;
-    }
+    return content.trim();
   };
 
   const getShareUrl = (platform: string, content: string): string => {
@@ -102,9 +49,9 @@ export function useShareTemplate() {
       case 'twitter':
         return `https://twitter.com/intent/tweet?text=${encodedContent}`;
       case 'line':
-        return `https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(LP_LINK)}&text=${encodedContent}`;
+        return `https://social-plugins.line.me/lineit/share?url=${encodedContent}`;
       default:
-        return '';
+        return `https://twitter.com/intent/tweet?text=${encodedContent}`;
     }
   };
 
@@ -112,8 +59,6 @@ export function useShareTemplate() {
     generateTemplate,
     getShareUrl,
     canRemoveTags: isPro,
-    canRemoveLpLink: isPro,
-    tagsEnabled: isPro ? shareTagsEnabled : true,
-    lpLinkEnabled: isPro ? lpLinkEnabled : true,
+    canRemoveLpLink: isPro
   };
 }

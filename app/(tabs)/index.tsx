@@ -17,17 +17,7 @@ import { Send, Sparkles, Crown, Share2 } from 'lucide-react-native';
 import { useSettings } from '@/hooks/SettingsContext';
 import { useRouter } from 'expo-router';
 import { ShareModal } from '@/components/ShareModal';
-
-const REPHRASE_STYLES = [
-  { id: 'meigen', name: '名言風', description: '深く響く名言のように', emoji: '💭', color: '#8B5CF6' },
-  { id: 'menhera', name: 'メンヘラ風', description: '感情的で繊細な表現', emoji: '🥺', color: '#EC4899' },
-  { id: 'chuunibyou', name: '厨二病風', description: '中二病的でカッコイイ', emoji: '⚡', color: '#6366F1' },
-  { id: 'keigo', name: '敬語風', description: '丁寧で上品な表現', emoji: '🙏', color: '#059669' },
-  { id: 'kansai', name: '関西弁風', description: '親しみやすい関西弁', emoji: '😄', color: '#F59E0B' },
-  { id: 'poet', name: '詩人風', description: '美しく詩的な表現', emoji: '🌸', color: '#DB2777' },
-  { id: 'business', name: 'ビジネス風', description: 'プロフェッショナルな表現', emoji: '💼', color: '#1F2937' },
-  { id: 'gyaru', name: 'ギャル風', description: '元気で可愛い表現', emoji: '💅', color: '#F472B6' },
-];
+import { REPHRASE_STYLES, getActiveStyles, getStyleById } from '@/config/styles';
 
 const { width: screenWidth } = Dimensions.get('window');
 const CARD_WIDTH = screenWidth * 0.7;
@@ -37,11 +27,13 @@ export default function RephraseScreen() {
   const { apiKey, isPro, rephraseCount, setRephraseCount } = useSettings();
   const router = useRouter();
   const [inputText, setInputText] = useState('');
-  const [selectedStyle, setSelectedStyle] = useState(REPHRASE_STYLES[0]);
+  const [selectedStyle, setSelectedStyle] = useState(getActiveStyles()[0]);
   const [rephraseResult, setRephraseResult] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const flatListRef = useRef<FlatList>(null);
+
+  const activeStyles = getActiveStyles();
 
   const handleRephrase = async () => {
     // APIキーの確認
@@ -84,7 +76,7 @@ export default function RephraseScreen() {
           messages: [
             {
               role: 'user',
-              content: `${selectedStyle.name}で以下の文章を言い換えてください：\n${inputText}`,
+              content: `${selectedStyle.prompt}\n\n文章: ${inputText}`,
             },
           ],
           max_tokens: 500,
@@ -149,6 +141,30 @@ export default function RephraseScreen() {
             styles.styleCardDescription,
             { color: isSelected ? 'rgba(255,255,255,0.9)' : '#6b7280' }
           ]}>{item.description}</Text>
+          
+          {/* カテゴリーバッジ */}
+          {item.category && (
+            <View style={[
+              styles.categoryBadge,
+              { backgroundColor: isSelected ? 'rgba(255,255,255,0.2)' : '#f3f4f6' }
+            ]}>
+              <Text style={[
+                styles.categoryText,
+                { color: isSelected ? '#ffffff' : '#6b7280' }
+              ]}>
+                {item.category === 'popular' ? '人気' : 
+                 item.category === 'creative' ? 'クリエイティブ' :
+                 item.category === 'business' ? 'ビジネス' : '楽しい'}
+              </Text>
+            </View>
+          )}
+          
+          {/* 期間限定バッジ */}
+          {item.isLimited && (
+            <View style={styles.limitedBadge}>
+              <Text style={styles.limitedText}>期間限定</Text>
+            </View>
+          )}
         </View>
       </TouchableOpacity>
     );
@@ -211,7 +227,7 @@ export default function RephraseScreen() {
             <Text style={styles.sectionTitle}>文章を入力</Text>
             <TextInput
               style={styles.textInput}
-              placeholder="ここに文章を入力してください..."
+              placeholder="例: 今日はいい天気ですね"
               value={inputText}
               onChangeText={setInputText}
               multiline
@@ -223,9 +239,12 @@ export default function RephraseScreen() {
           {/* スタイル選択カルーセル */}
           <View style={styles.styleSection}>
             <Text style={styles.sectionTitle}>スタイルを選択</Text>
+            <Text style={styles.styleSectionSubtitle}>
+              8つのスタイルから選んで、文章を変換しよう！
+            </Text>
             <FlatList
               ref={flatListRef}
-              data={REPHRASE_STYLES}
+              data={activeStyles}
               renderItem={renderStyleCard}
               keyExtractor={(item) => item.id}
               horizontal
@@ -253,7 +272,7 @@ export default function RephraseScreen() {
                 : <Send size={20} color="#fff" />
               }
               <Text style={styles.rephraseButtonText}>
-                {isLoading ? '処理中...' : '言い換える'}
+                {isLoading ? '変換中...' : '言い換える'}
               </Text>
               {!isPro && (
                 <Text style={styles.countText}>
@@ -268,7 +287,10 @@ export default function RephraseScreen() {
             <View style={styles.resultSection}>
               <View style={styles.resultHeader}>
                 <Sparkles size={20} color="#8B5CF6" />
-                <Text style={styles.sectionTitle}>言い換え結果</Text>
+                <Text style={styles.sectionTitle}>変換結果</Text>
+                <View style={styles.resultStyleTag}>
+                  <Text style={styles.resultStyleText}>{selectedStyle.name}</Text>
+                </View>
               </View>
               <View style={styles.resultContainer}>
                 <Text style={styles.resultText}>{rephraseResult}</Text>
@@ -428,6 +450,12 @@ const styles = StyleSheet.create({
   styleSection: {
     marginBottom: 32,
   },
+  styleSectionSubtitle: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    color: '#6b7280',
+    marginBottom: 16,
+  },
   styleCarousel: {
     paddingHorizontal: 10,
   },
@@ -453,6 +481,7 @@ const styles = StyleSheet.create({
   styleCardContent: {
     alignItems: 'center',
     justifyContent: 'center',
+    position: 'relative',
   },
   styleEmoji: {
     fontSize: 32,
@@ -469,6 +498,31 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
     textAlign: 'center',
     lineHeight: 20,
+    marginBottom: 12,
+  },
+  categoryBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginBottom: 4,
+  },
+  categoryText: {
+    fontSize: 12,
+    fontFamily: 'Inter-Medium',
+  },
+  limitedBadge: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: '#EF4444',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  limitedText: {
+    fontSize: 10,
+    fontFamily: 'Inter-Bold',
+    color: '#ffffff',
   },
   rephraseButton: { 
     marginBottom: 24, 
@@ -512,6 +566,20 @@ const styles = StyleSheet.create({
     alignItems: 'center', 
     gap: 8, 
     marginBottom: 16 
+  },
+  resultStyleTag: {
+    marginLeft: 'auto',
+    backgroundColor: '#f3f4f6',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#8B5CF6',
+  },
+  resultStyleText: {
+    fontSize: 12,
+    fontFamily: 'Inter-SemiBold',
+    color: '#8B5CF6',
   },
   resultContainer: { 
     position: 'relative' 
