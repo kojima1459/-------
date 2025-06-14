@@ -9,7 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Clock, Copy, Trash2, Crown, Sparkles } from 'lucide-react-native';
+import { Clock, Copy, Trash2, Crown, Sparkles, Lock } from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useSettings } from '@/hooks/SettingsContext';
 import { useRouter } from 'expo-router';
@@ -79,6 +79,27 @@ export default function HistoryScreen() {
         rephraseText: '我が使命を果たすため、全力で立ち向かうのみ！',
         style: '厨二病風',
         timestamp: new Date('2024-01-13T15:20:00'),
+      },
+      {
+        id: '8',
+        originalText: '明日は大事な会議があります。',
+        rephraseText: '明日の会議につきましては、責任を重く受け止め、全力で臨む所存でございます。',
+        style: '政治家会見風',
+        timestamp: new Date('2024-01-13T10:45:00'),
+      },
+      {
+        id: '9',
+        originalText: '今日はぐっすり眠れそうです。',
+        rephraseText: '夜も更け、心の奥底に眠る静寂が訪れる。まるで世界が一時停止したかのように...',
+        style: '村上春樹風',
+        timestamp: new Date('2024-01-12T22:30:00'),
+      },
+      {
+        id: '10',
+        originalText: 'システムを更新しました。',
+        rephraseText: 'バックエンドのアーキテクチャをリファクタリングし、パフォーマンスを最適化しました。CI/CDパイプラインも改善済みです。',
+        style: 'エンジニア風',
+        timestamp: new Date('2024-01-12T14:15:00'),
       },
     ]);
   }, []);
@@ -196,7 +217,7 @@ export default function HistoryScreen() {
               </View>
             ))}
 
-            {/* 無料版の制限表示 */}
+            {/* 無料版の制限表示 - ボカシ実装 */}
             {!isPro && hiddenHistory.length > 0 && (
               <View style={styles.limitSection}>
                 <View style={styles.limitHeader}>
@@ -211,25 +232,34 @@ export default function HistoryScreen() {
                 
                 {/* ボカシ表示の履歴プレビュー */}
                 <View style={styles.blurredSection}>
-                  {hiddenHistory.slice(0, 2).map((item) => (
+                  {hiddenHistory.slice(0, 3).map((item) => (
                     <View key={item.id} style={[styles.historyCard, styles.blurredCard]}>
+                      {/* ボカシオーバーレイ */}
                       <View style={styles.blurredOverlay}>
-                        <Crown size={32} color="#F59E0B" />
+                        <Lock size={32} color="#F59E0B" />
                         <Text style={styles.blurredText}>Pro版で表示</Text>
+                        <TouchableOpacity style={styles.unlockButton} onPress={handleUpgradePress}>
+                          <Crown size={16} color="#ffffff" />
+                          <Text style={styles.unlockButtonText}>解除</Text>
+                        </TouchableOpacity>
                       </View>
-                      <View style={styles.historyHeader}>
-                        <View style={styles.styleTag}>
-                          <Text style={styles.styleTagText}>{item.style}</Text>
+                      
+                      {/* ボカシされたコンテンツ */}
+                      <View style={styles.blurredContent}>
+                        <View style={styles.historyHeader}>
+                          <View style={styles.styleTag}>
+                            <Text style={styles.styleTagText}>{item.style}</Text>
+                          </View>
+                          <Text style={styles.timestamp}>{formatDate(item.timestamp)}</Text>
                         </View>
-                        <Text style={styles.timestamp}>{formatDate(item.timestamp)}</Text>
-                      </View>
-                      <View style={styles.textSection}>
-                        <Text style={styles.label}>元の文章</Text>
-                        <Text style={styles.originalText}>{item.originalText}</Text>
-                      </View>
-                      <View style={styles.textSection}>
-                        <Text style={styles.label}>変換結果</Text>
-                        <Text style={styles.rephraseText}>{item.rephraseText}</Text>
+                        <View style={styles.textSection}>
+                          <Text style={styles.label}>元の文章</Text>
+                          <Text style={styles.originalText}>{item.originalText}</Text>
+                        </View>
+                        <View style={styles.textSection}>
+                          <Text style={styles.label}>変換結果</Text>
+                          <Text style={styles.rephraseText}>{item.rephraseText}</Text>
+                        </View>
                       </View>
                     </View>
                   ))}
@@ -239,6 +269,7 @@ export default function HistoryScreen() {
                   <LinearGradient colors={['#8B5CF6', '#EC4899']} style={styles.upgradeButtonGradient}>
                     <Crown size={18} color="#ffffff" />
                     <Text style={styles.upgradeButtonText}>Pro版にアップグレード</Text>
+                    <Text style={styles.upgradeSubtext}>ネタ投稿用の投資です</Text>
                   </LinearGradient>
                 </TouchableOpacity>
               </View>
@@ -459,7 +490,7 @@ const styles = StyleSheet.create({
   },
   blurredCard: {
     position: 'relative',
-    opacity: 0.6,
+    overflow: 'hidden',
   },
   blurredOverlay: {
     position: 'absolute',
@@ -467,17 +498,35 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 1,
-    gap: 8,
+    zIndex: 2,
+    gap: 12,
   },
   blurredText: {
-    fontSize: 16,
+    fontSize: 18,
     fontFamily: 'Inter-Bold',
     color: '#F59E0B',
+  },
+  unlockButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#F59E0B',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  unlockButtonText: {
+    fontSize: 14,
+    fontFamily: 'Inter-SemiBold',
+    color: '#ffffff',
+  },
+  blurredContent: {
+    filter: 'blur(2px)',
+    opacity: 0.3,
   },
   upgradeButton: {
     borderRadius: 12,
@@ -492,16 +541,22 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   upgradeButtonGradient: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
+    paddingVertical: 20,
     paddingHorizontal: 20,
     gap: 8,
   },
   upgradeButtonText: {
-    fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
+    fontSize: 18,
+    fontFamily: 'Inter-Bold',
     color: '#ffffff',
+  },
+  upgradeSubtext: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    color: '#ffffff',
+    opacity: 0.9,
   },
 });

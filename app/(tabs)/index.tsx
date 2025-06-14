@@ -14,15 +14,15 @@ import {
   KeyboardAvoidingView,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Send, Sparkles, Crown, Share2 } from 'lucide-react-native';
+import { Send, Sparkles, Crown, Share2, Lock } from 'lucide-react-native';
 import { useSettings } from '@/hooks/SettingsContext';
 import { useRouter } from 'expo-router';
 import { ShareModal } from '@/components/ShareModal';
-import { REPHRASE_STYLES, getActiveStyles, getStyleById } from '@/config/styles';
+import { getActiveStyles, getStyleById } from '@/config/styles';
 
 const { width: screenWidth } = Dimensions.get('window');
-const CARD_WIDTH = screenWidth * 0.62; // 62%に縮小（左右に見切れるUX）
-const CARD_SPACING = 16;
+const CARD_WIDTH = screenWidth * 0.45; // 3つ見えるように45%に調整
+const CARD_SPACING = 12;
 
 export default function RephraseScreen() {
   const { apiKey, isPro, rephraseCount, setRephraseCount } = useSettings();
@@ -34,15 +34,14 @@ export default function RephraseScreen() {
   const [showShareModal, setShowShareModal] = useState(false);
   const flatListRef = useRef<FlatList>(null);
 
-  const activeStyles = getActiveStyles();
+  const activeStyles = getActiveStyles(isPro);
   const selectedStyle = activeStyles[selectedStyleIndex];
 
   // === 🔍 STEP 1: 基本情報デバッグ ===
   console.log('\n=== コトバクラフト デバッグ情報 ===');
   console.log('🔑 API Key 設定状況:', apiKey ? `設定済み (${apiKey.substring(0, 10)}...)` : '❌ 未設定');
-  console.log('📊 REPHRASE_STYLES 総数:', REPHRASE_STYLES.length);
+  console.log('📊 全スタイル総数:', activeStyles.length);
   console.log('📊 アクティブスタイル配列:', activeStyles);
-  console.log('📊 アクティブスタイル数:', activeStyles.length);
   console.log('📊 選択中インデックス:', selectedStyleIndex);
   console.log('📊 選択中スタイル Raw:', selectedStyle);
   
@@ -110,7 +109,6 @@ export default function RephraseScreen() {
       console.error('  - selectedStyleIndex:', selectedStyleIndex);
       console.error('  - activeStyles:', activeStyles);
       console.error('  - activeStyles.length:', activeStyles.length);
-      console.error('  - REPHRASE_STYLES:', REPHRASE_STYLES);
       Alert.alert('エラー', 'スタイル選択にエラーがあります。アプリを再起動してください。');
       return;
     }
@@ -354,28 +352,48 @@ export default function RephraseScreen() {
     });
   };
 
+  const handleProStylePress = () => {
+    Alert.alert(
+      'Pro版限定スタイル',
+      'このスタイルはPro版でご利用いただけます。',
+      [
+        { text: 'キャンセル', style: 'cancel' },
+        { text: 'Pro版にアップグレード', onPress: navigateToSettings },
+      ]
+    );
+  };
+
   const renderStyleCard = ({ item, index }: { item: any; index: number }) => {
     const isSelected = selectedStyleIndex === index;
+    const isProStyle = item.isPro && !isPro;
     
     return (
       <TouchableOpacity
         style={[
           styles.styleCard,
           isSelected && styles.selectedStyleCard,
-          { backgroundColor: isSelected ? item.color : '#ffffff' }
+          { backgroundColor: isSelected ? item.color : '#ffffff' },
+          isProStyle && styles.proStyleCard
         ]}
-        onPress={() => onStyleSelect(index)}
+        onPress={() => isProStyle ? handleProStylePress() : onStyleSelect(index)}
         activeOpacity={0.8}
       >
         <View style={styles.styleCardContent}>
+          {isProStyle && (
+            <View style={styles.proLockOverlay}>
+              <Crown size={20} color="#F59E0B" />
+            </View>
+          )}
           <Text style={styles.styleEmoji}>{item.emoji}</Text>
           <Text style={[
             styles.styleCardTitle,
-            { color: isSelected ? '#ffffff' : '#1f2937' }
+            { color: isSelected ? '#ffffff' : '#1f2937' },
+            isProStyle && styles.proStyleText
           ]}>{item.name}</Text>
           <Text style={[
             styles.styleCardDescription,
-            { color: isSelected ? 'rgba(255,255,255,0.9)' : '#6b7280' }
+            { color: isSelected ? 'rgba(255,255,255,0.9)' : '#6b7280' },
+            isProStyle && styles.proStyleText
           ]}>{item.description}</Text>
           
           {/* カテゴリーバッジ */}
@@ -390,7 +408,8 @@ export default function RephraseScreen() {
               ]}>
                 {item.category === 'popular' ? '人気' : 
                  item.category === 'creative' ? 'クリエイティブ' :
-                 item.category === 'business' ? 'ビジネス' : '楽しい'}
+                 item.category === 'business' ? 'ビジネス' : 
+                 item.category === 'pro' ? 'Pro版' : '楽しい'}
               </Text>
             </View>
           )}
@@ -455,7 +474,7 @@ export default function RephraseScreen() {
               }
             </Text>
             <TouchableOpacity style={styles.upgradePrompt} onPress={navigateToSettings}>
-              <Text style={styles.upgradePromptText}>有料版で無制限利用 →</Text>
+              <Text style={styles.upgradePromptText}>Pro版で無制限利用 →</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -478,6 +497,22 @@ export default function RephraseScreen() {
                   placeholderTextColor="#9ca3af"
                 />
               </View>
+
+              {/* 選択中スタイルの説明表示 */}
+              {selectedStyle && (
+                <View style={styles.selectedStyleInfo}>
+                  <View style={styles.selectedStyleHeader}>
+                    <Text style={styles.selectedStyleEmoji}>{selectedStyle.emoji}</Text>
+                    <Text style={styles.selectedStyleName}>{selectedStyle.name}</Text>
+                    {selectedStyle.isPro && !isPro && (
+                      <Crown size={16} color="#F59E0B" />
+                    )}
+                  </View>
+                  <Text style={styles.selectedStyleDescription}>
+                    {selectedStyle.description}
+                  </Text>
+                </View>
+              )}
 
               {/* 横スワイプ リールUI スタイル選択 */}
               <View style={styles.styleSection}>
@@ -526,7 +561,7 @@ export default function RephraseScreen() {
                           { backgroundColor: index === selectedStyleIndex ? '#8B5CF6' : '#e5e7eb' }
                         ]}
                       />
-                    ))}
+                    )).slice(0, 10)} {/* 最初の10個だけ表示 */}
                   </View>
                 </View>
               </View>
@@ -708,7 +743,7 @@ const styles = StyleSheet.create({
     elevation: 8 
   },
   inputSection: {
-    marginBottom: 32,
+    marginBottom: 24,
   },
   sectionTitle: { 
     fontSize: 18, 
@@ -727,6 +762,36 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9fafb', 
     minHeight: 100, 
     textAlignVertical: 'top' 
+  },
+  selectedStyleInfo: {
+    backgroundColor: '#f0f9ff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+  },
+  selectedStyleHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  selectedStyleEmoji: {
+    fontSize: 20,
+  },
+  selectedStyleName: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+    color: '#1e40af',
+    flex: 1,
+  },
+  selectedStyleDescription: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    color: '#1e40af',
+    opacity: 0.8,
+    lineHeight: 20,
   },
   styleSection: {
     marginBottom: 32,
@@ -747,23 +812,39 @@ const styles = StyleSheet.create({
   styleCard: {
     width: CARD_WIDTH,
     marginHorizontal: CARD_SPACING / 2,
-    borderRadius: 20,
-    padding: 20,
+    borderRadius: 16,
+    padding: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
     borderWidth: 2,
     borderColor: '#e5e7eb',
-    minHeight: 180,
+    minHeight: 160,
   },
   selectedStyleCard: {
     shadowOpacity: 0.25,
     shadowRadius: 16,
     elevation: 12,
     borderColor: 'transparent',
-    transform: [{ scale: 1.02 }],
+    transform: [{ scale: 1.05 }],
+  },
+  proStyleCard: {
+    opacity: 0.7,
+    position: 'relative',
+  },
+  proLockOverlay: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    borderRadius: 12,
+    padding: 4,
+    zIndex: 1,
+  },
+  proStyleText: {
+    opacity: 0.7,
   },
   styleCardContent: {
     alignItems: 'center',
@@ -772,30 +853,30 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   styleEmoji: {
-    fontSize: 36,
-    marginBottom: 12,
+    fontSize: 32,
+    marginBottom: 8,
   },
   styleCardTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontFamily: 'Inter-Bold',
-    marginBottom: 6,
+    marginBottom: 4,
     textAlign: 'center',
   },
   styleCardDescription: {
-    fontSize: 13,
+    fontSize: 12,
     fontFamily: 'Inter-Regular',
     textAlign: 'center',
-    lineHeight: 18,
-    marginBottom: 10,
+    lineHeight: 16,
+    marginBottom: 8,
   },
   categoryBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 6,
     marginBottom: 4,
   },
   categoryText: {
-    fontSize: 11,
+    fontSize: 10,
     fontFamily: 'Inter-Medium',
   },
   limitedBadge: {
@@ -827,12 +908,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 16,
-    gap: 8,
+    gap: 6,
   },
   indicatorDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   resultSection: {
     borderTopWidth: 1,
