@@ -181,11 +181,11 @@ export function ShareModal({ visible, onClose, rephraseText, style, onUpgradePre
           <View style={styles.customizationInfo}>
             <Crown size={16} color="#F59E0B" />
             <Text style={styles.customizationInfoText}>
-              Pro版でハッシュタグとリンクの表示をカスタマイズできます
+              Pro版（月額99円）でハッシュタグとリンクの表示をカスタマイズできます
             </Text>
           </View>
           <TouchableOpacity style={styles.upgradeSmallButton} onPress={onUpgradePress}>
-            <Text style={styles.upgradeSmallButtonText}>アップグレード</Text>
+            <Text style={styles.upgradeSmallButtonText}>99円</Text>
           </TouchableOpacity>
         </View>
       );
@@ -195,7 +195,7 @@ export function ShareModal({ visible, onClose, rephraseText, style, onUpgradePre
       <View style={styles.proFeature}>
         <View style={styles.proHeader}>
           <Crown size={16} color="#F59E0B" />
-          <Text style={styles.proText}>Pro版特典: カスタマイズ可能</Text>
+          <Text style={styles.proText}>Pro版特典（月額99円）: カスタマイズ可能</Text>
         </View>
         <Text style={styles.proDescription}>
           Settings画面でハッシュタグとリンクの表示を制御できます
@@ -261,10 +261,33 @@ export function ShareModal({ visible, onClose, rephraseText, style, onUpgradePre
                 • Instagramでは画像と組み合わせると効果的{'\n'}
                 • TikTokでは動画のキャプションとして活用{'\n'}
                 • ハッシュタグでより多くの人に届けよう{'\n'}
-                • 定期的な投稿でフォロワーを増やそう
+                • 定期的な投稿でフォロワーを増やそう{'\n'}
+                • Pro版（月額99円）で設定をカスタマイズ
               </Text>
             </View>
           </View>
+
+          {/* Pro版アップグレード促進 */}
+          {!isPro && (
+            <View style={styles.section}>
+              <View style={styles.proPromotionCard}>
+                <View style={styles.proPromotionHeader}>
+                  <Crown size={24} color="#F59E0B" />
+                  <Text style={styles.proPromotionTitle}>Pro版でもっと自由に</Text>
+                </View>
+                <Text style={styles.proPromotionText}>
+                  月額99円で、ハッシュタグやリンクの表示をカスタマイズできます。
+                  ネタ投稿用の投資として、より自分らしいシェアを楽しみませんか？
+                </Text>
+                <TouchableOpacity style={styles.proPromotionButton} onPress={onUpgradePress}>
+                  <LinearGradient colors={['#8B5CF6', '#EC4899']} style={styles.proPromotionGradient}>
+                    <Crown size={16} color="#ffffff" />
+                    <Text style={styles.proPromotionButtonText}>月額99円でアップグレード</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
         </ScrollView>
       </View>
     </Modal>
@@ -462,5 +485,55 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
     color: '#6b7280',
     lineHeight: 20,
+  },
+  proPromotionCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 2,
+    borderColor: '#F59E0B',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  proPromotionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 12,
+  },
+  proPromotionTitle: {
+    fontSize: 18,
+    fontFamily: 'Inter-Bold',
+    color: '#1f2937',
+  },
+  proPromotionText: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    color: '#6b7280',
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  proPromotionButton: {
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  proPromotionGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    gap: 8,
+  },
+  proPromotionButtonText: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+    color: '#ffffff',
   },
 });

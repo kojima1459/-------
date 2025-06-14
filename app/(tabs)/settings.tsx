@@ -56,23 +56,23 @@ export default function SettingsScreen() {
   const handleUpgradePress = () => {
     if (!isPro) {
       Alert.alert(
-        '有料版にアップグレード',
-        'Pro版では無制限に言い換え機能をご利用いただけます。\n\n※現在はデモ版のため、実際の課金は発生しません。',
+        'Pro版にアップグレード - 月額99円',
+        'Pro版では無制限に言い換え機能をご利用いただけます。\n\n✨ 無制限変換\n👑 限定スタイル\n📱 広告なし\n🎨 カスタマイズ機能\n\n月額99円（ネタ投稿用の投資です）\n\n※現在はデモ版のため、実際の課金は発生しません。',
         [
           { text: 'キャンセル', style: 'cancel' },
           { 
-            text: 'アップグレード', 
+            text: '99円でアップグレード', 
             onPress: () => {
               setIsPro(true);
               resetDailyCount();
-              Alert.alert('🎉 アップグレード完了', 'Pro版へのアップグレードが完了しました！\n無制限に言い換え機能をお使いいただけます。');
+              Alert.alert('🎉 アップグレード完了', 'Pro版へのアップグレードが完了しました！\n無制限に言い換え機能をお使いいただけます。\n\n限定スタイルもお楽しみください！');
             }
           },
         ]
       );
     } else {
       Alert.alert(
-        'Pro版をキャンセル',
+        'Pro版を解約しますか？',
         'Pro版を解約して無料版に戻りますか？\n\n※無料版では1日5回までの制限があります。',
         [
           { text: 'キャンセル', style: 'cancel' },
@@ -180,7 +180,7 @@ export default function SettingsScreen() {
                     </Text>
                     <Text style={styles.planSubtitle}>
                       {isPro 
-                        ? '無制限に利用可能' 
+                        ? '月額99円 - 無制限に利用可能' 
                         : `${rephraseCount}/5回 利用済み`
                       }
                     </Text>
@@ -192,6 +192,32 @@ export default function SettingsScreen() {
                   </View>
                 )}
               </View>
+
+              {/* Pro版の特典表示 */}
+              {isPro ? (
+                <View style={styles.proFeatures}>
+                  <Text style={styles.proFeaturesTitle}>✨ Pro版特典</Text>
+                  <View style={styles.featuresList}>
+                    <Text style={styles.featureItem}>• 無制限変換</Text>
+                    <Text style={styles.featureItem}>• 限定スタイル（意味深スケベ風など）</Text>
+                    <Text style={styles.featureItem}>• 全履歴表示</Text>
+                    <Text style={styles.featureItem}>• シェア設定カスタマイズ</Text>
+                    <Text style={styles.featureItem}>• ダークモード</Text>
+                  </View>
+                </View>
+              ) : (
+                <View style={styles.upgradeFeatures}>
+                  <Text style={styles.upgradeFeaturesTitle}>🚀 Pro版なら（月額99円）</Text>
+                  <View style={styles.featuresList}>
+                    <Text style={styles.upgradeFeatureItem}>• 無制限変換（1日5回 → ∞）</Text>
+                    <Text style={styles.upgradeFeatureItem}>• 限定スタイル解放</Text>
+                    <Text style={styles.upgradeFeatureItem}>• 全履歴表示</Text>
+                    <Text style={styles.upgradeFeatureItem}>• 広告なし</Text>
+                    <Text style={styles.upgradeFeatureItem}>• カスタマイズ機能</Text>
+                  </View>
+                  <Text style={styles.investmentNote}>ネタ投稿用の投資です 💸</Text>
+                </View>
+              )}
               
               <TouchableOpacity 
                 style={[
@@ -210,7 +236,7 @@ export default function SettingsScreen() {
                     <Crown size={18} color="#ffffff" />
                   )}
                   <Text style={styles.upgradeButtonText}>
-                    {isPro ? 'Pro版をキャンセル' : '有料版にアップグレード'}
+                    {isPro ? 'Pro版をキャンセル' : '月額99円でアップグレード'}
                   </Text>
                 </LinearGradient>
               </TouchableOpacity>
@@ -263,7 +289,7 @@ export default function SettingsScreen() {
                 ) : (
                   <View style={styles.lockedIndicator}>
                     <Crown size={16} color="#F59E0B" />
-                    <Text style={styles.lockedText}>Pro版</Text>
+                    <Text style={styles.lockedText}>99円/月</Text>
                   </View>
                 )
               }
@@ -289,7 +315,7 @@ export default function SettingsScreen() {
                 ) : (
                   <View style={styles.lockedIndicator}>
                     <Crown size={16} color="#F59E0B" />
-                    <Text style={styles.lockedText}>Pro版</Text>
+                    <Text style={styles.lockedText}>99円/月</Text>
                   </View>
                 )
               }
@@ -298,22 +324,22 @@ export default function SettingsScreen() {
             {!isPro && (
               <View style={styles.upgradeHint}>
                 <Text style={styles.upgradeHintText}>
-                  Pro版にアップグレードすると、SNSシェア時のハッシュタグとリンクの表示をカスタマイズできます。
+                  Pro版（月額99円）にアップグレードすると、SNSシェア時のハッシュタグとリンクの表示をカスタマイズできます。
                 </Text>
                 <TouchableOpacity style={styles.upgradeHintButton} onPress={handleUpgradePress}>
-                  <Text style={styles.upgradeHintButtonText}>アップグレード</Text>
+                  <Text style={styles.upgradeHintButtonText}>99円でアップグレード</Text>
                 </TouchableOpacity>
               </View>
             )}
           </View>
         </SettingSection>
 
-        <SettingSection title="Pro版専用設定">
+        <SettingSection title="Pro版専用設定（月額99円）">
           <View style={styles.card}>
             <SettingRow
               icon={<Palette size={20} color={isPro ? "#8B5CF6" : "#9ca3af"} />}
               title="ダークモード"
-              subtitle={isPro ? "外観を暗いテーマに変更" : "Pro版でご利用いただけます"}
+              subtitle={isPro ? "外観を暗いテーマに変更" : "Pro版（月額99円）でご利用いただけます"}
               disabled={!isPro}
               rightComponent={
                 isPro ? (
@@ -326,7 +352,7 @@ export default function SettingsScreen() {
                 ) : (
                   <View style={styles.lockedIndicator}>
                     <Crown size={16} color="#F59E0B" />
-                    <Text style={styles.lockedText}>Pro版</Text>
+                    <Text style={styles.lockedText}>99円/月</Text>
                   </View>
                 )
               }
@@ -337,7 +363,7 @@ export default function SettingsScreen() {
             <SettingRow
               icon={<Info size={20} color={isPro ? "#8B5CF6" : "#9ca3af"} />}
               title="履歴を保存"
-              subtitle={isPro ? "言い換え履歴をデバイスに保存" : "Pro版でご利用いただけます"}
+              subtitle={isPro ? "言い換え履歴をデバイスに保存" : "Pro版（月額99円）でご利用いただけます"}
               disabled={!isPro}
               rightComponent={
                 isPro ? (
@@ -350,7 +376,7 @@ export default function SettingsScreen() {
                 ) : (
                   <View style={styles.lockedIndicator}>
                     <Crown size={16} color="#F59E0B" />
-                    <Text style={styles.lockedText}>Pro版</Text>
+                    <Text style={styles.lockedText}>99円/月</Text>
                   </View>
                 )
               }
@@ -359,10 +385,10 @@ export default function SettingsScreen() {
             {!isPro && (
               <View style={styles.upgradeHint}>
                 <Text style={styles.upgradeHintText}>
-                  Pro版では、ダークモードや履歴保存などの高度な設定をご利用いただけます。
+                  Pro版（月額99円）では、ダークモードや履歴保存などの高度な設定をご利用いただけます。
                 </Text>
                 <TouchableOpacity style={styles.upgradeHintButton} onPress={handleUpgradePress}>
-                  <Text style={styles.upgradeHintButtonText}>アップグレード</Text>
+                  <Text style={styles.upgradeHintButtonText}>99円でアップグレード</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -547,6 +573,57 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: 'Inter-Bold',
     color: '#ffffff',
+  },
+  proFeatures: {
+    backgroundColor: '#f0f9ff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+  },
+  proFeaturesTitle: {
+    fontSize: 16,
+    fontFamily: 'Inter-Bold',
+    color: '#1e40af',
+    marginBottom: 12,
+  },
+  upgradeFeatures: {
+    backgroundColor: '#fef3c7',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#f59e0b',
+  },
+  upgradeFeaturesTitle: {
+    fontSize: 16,
+    fontFamily: 'Inter-Bold',
+    color: '#92400e',
+    marginBottom: 12,
+  },
+  featuresList: {
+    gap: 6,
+  },
+  featureItem: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    color: '#1e40af',
+    lineHeight: 20,
+  },
+  upgradeFeatureItem: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    color: '#92400e',
+    lineHeight: 20,
+  },
+  investmentNote: {
+    fontSize: 12,
+    fontFamily: 'Inter-Medium',
+    color: '#92400e',
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginTop: 8,
   },
   upgradeButton: {
     borderRadius: 12,

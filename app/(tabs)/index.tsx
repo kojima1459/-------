@@ -12,6 +12,7 @@ import {
   FlatList,
   Dimensions,
   KeyboardAvoidingView,
+  Animated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Send, Sparkles, Crown, Share2, Lock } from 'lucide-react-native';
@@ -33,6 +34,8 @@ export default function RephraseScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const flatListRef = useRef<FlatList>(null);
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
 
   const activeStyles = getActiveStyles(isPro);
   const selectedStyle = activeStyles[selectedStyleIndex];
@@ -84,10 +87,10 @@ export default function RephraseScreen() {
       console.error('❌ エラー: 無料版制限に達しました');
       Alert.alert(
         '制限に達しました',
-        '5回までの無料利用が完了しました。有料版にアップグレードして続けて利用できます。',
+        '5回までの無料利用が完了しました。Pro版（月額99円）にアップグレードして続けて利用できます。',
         [
           { text: 'キャンセル', style: 'cancel' },
-          { text: '有料版にアップグレード', onPress: () => router.push('/settings') },
+          { text: 'Pro版にアップグレード', onPress: () => router.push('/settings') },
         ]
       );
       return;
@@ -202,6 +205,36 @@ export default function RephraseScreen() {
     console.log('\n📋 Step 5: API呼び出し実行');
     
     setIsLoading(true);
+
+    // ボタンアニメーション開始
+    Animated.sequence([
+      Animated.timing(scaleAnim, {
+        toValue: 0.95,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 1,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // パルスアニメーション開始
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.05,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
     
     try {
       console.log('🌐 API Request 送信中...');
@@ -330,6 +363,15 @@ export default function RephraseScreen() {
       Alert.alert('エラー', 'ネットワークエラーが発生しました。インターネット接続を確認してください。');
     } finally {
       setIsLoading(false);
+      
+      // アニメーション停止
+      pulseAnim.stopAnimation();
+      Animated.timing(pulseAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+      
       console.log('\n🏁 === 言語生成プロセス完了 ===\n');
     }
   };
@@ -350,12 +392,31 @@ export default function RephraseScreen() {
       animated: true,
       viewPosition: 0.5 
     });
+
+    // スタイル選択時のマイクロアニメーション
+    Animated.sequence([
+      Animated.timing(scaleAnim, {
+        toValue: 0.98,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 1.02,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 1,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+    ]).start();
   };
 
   const handleProStylePress = () => {
     Alert.alert(
       'Pro版限定スタイル',
-      'このスタイルはPro版でご利用いただけます。',
+      'このスタイルはPro版（月額99円）でご利用いただけます。\n\nネタ投稿用の投資として、ぜひご検討ください！',
       [
         { text: 'キャンセル', style: 'cancel' },
         { text: 'Pro版にアップグレード', onPress: navigateToSettings },
@@ -368,60 +429,66 @@ export default function RephraseScreen() {
     const isProStyle = item.isPro && !isPro;
     
     return (
-      <TouchableOpacity
-        style={[
-          styles.styleCard,
-          isSelected && styles.selectedStyleCard,
-          { backgroundColor: isSelected ? item.color : '#ffffff' },
-          isProStyle && styles.proStyleCard
-        ]}
-        onPress={() => isProStyle ? handleProStylePress() : onStyleSelect(index)}
-        activeOpacity={0.8}
+      <Animated.View
+        style={{
+          transform: [{ scale: isSelected ? scaleAnim : 1 }]
+        }}
       >
-        <View style={styles.styleCardContent}>
-          {isProStyle && (
-            <View style={styles.proLockOverlay}>
-              <Crown size={20} color="#F59E0B" />
-            </View>
-          )}
-          <Text style={styles.styleEmoji}>{item.emoji}</Text>
-          <Text style={[
-            styles.styleCardTitle,
-            { color: isSelected ? '#ffffff' : '#1f2937' },
-            isProStyle && styles.proStyleText
-          ]}>{item.name}</Text>
-          <Text style={[
-            styles.styleCardDescription,
-            { color: isSelected ? 'rgba(255,255,255,0.9)' : '#6b7280' },
-            isProStyle && styles.proStyleText
-          ]}>{item.description}</Text>
-          
-          {/* カテゴリーバッジ */}
-          {item.category && (
-            <View style={[
-              styles.categoryBadge,
-              { backgroundColor: isSelected ? 'rgba(255,255,255,0.2)' : '#f3f4f6' }
-            ]}>
-              <Text style={[
-                styles.categoryText,
-                { color: isSelected ? '#ffffff' : '#6b7280' }
+        <TouchableOpacity
+          style={[
+            styles.styleCard,
+            isSelected && styles.selectedStyleCard,
+            { backgroundColor: isSelected ? item.color : '#ffffff' },
+            isProStyle && styles.proStyleCard
+          ]}
+          onPress={() => isProStyle ? handleProStylePress() : onStyleSelect(index)}
+          activeOpacity={0.8}
+        >
+          <View style={styles.styleCardContent}>
+            {isProStyle && (
+              <View style={styles.proLockOverlay}>
+                <Crown size={20} color="#F59E0B" />
+              </View>
+            )}
+            <Text style={styles.styleEmoji}>{item.emoji}</Text>
+            <Text style={[
+              styles.styleCardTitle,
+              { color: isSelected ? '#ffffff' : '#1f2937' },
+              isProStyle && styles.proStyleText
+            ]}>{item.name}</Text>
+            <Text style={[
+              styles.styleCardDescription,
+              { color: isSelected ? 'rgba(255,255,255,0.9)' : '#6b7280' },
+              isProStyle && styles.proStyleText
+            ]}>{item.description}</Text>
+            
+            {/* カテゴリーバッジ */}
+            {item.category && (
+              <View style={[
+                styles.categoryBadge,
+                { backgroundColor: isSelected ? 'rgba(255,255,255,0.2)' : '#f3f4f6' }
               ]}>
-                {item.category === 'popular' ? '人気' : 
-                 item.category === 'creative' ? 'クリエイティブ' :
-                 item.category === 'business' ? 'ビジネス' : 
-                 item.category === 'pro' ? 'Pro版' : '楽しい'}
-              </Text>
-            </View>
-          )}
-          
-          {/* 期間限定バッジ */}
-          {item.isLimited && (
-            <View style={styles.limitedBadge}>
-              <Text style={styles.limitedText}>期間限定</Text>
-            </View>
-          )}
-        </View>
-      </TouchableOpacity>
+                <Text style={[
+                  styles.categoryText,
+                  { color: isSelected ? '#ffffff' : '#6b7280' }
+                ]}>
+                  {item.category === 'popular' ? '人気' : 
+                   item.category === 'creative' ? 'クリエイティブ' :
+                   item.category === 'business' ? 'ビジネス' : 
+                   item.category === 'pro' ? 'Pro版' : '楽しい'}
+                </Text>
+              </View>
+            )}
+            
+            {/* 期間限定バッジ */}
+            {item.isLimited && (
+              <View style={styles.limitedBadge}>
+                <Text style={styles.limitedText}>期間限定</Text>
+              </View>
+            )}
+          </View>
+        </TouchableOpacity>
+      </Animated.View>
     );
   };
 
@@ -474,7 +541,7 @@ export default function RephraseScreen() {
               }
             </Text>
             <TouchableOpacity style={styles.upgradePrompt} onPress={navigateToSettings}>
-              <Text style={styles.upgradePromptText}>Pro版で無制限利用 →</Text>
+              <Text style={styles.upgradePromptText}>Pro版（月額99円）で無制限利用 →</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -590,27 +657,29 @@ export default function RephraseScreen() {
 
           {/* 固定変換ボタン */}
           <View style={styles.fixedButtonContainer}>
-            <TouchableOpacity
-              style={[styles.rephraseButton, isLoading && styles.disabledButton]}
-              onPress={handleRephrase}
-              disabled={isLoading}
-              activeOpacity={0.8}
-            >
-              <LinearGradient colors={['#8B5CF6', '#EC4899']} style={styles.buttonGradient}>
-                {isLoading
-                  ? <ActivityIndicator color="#fff" size="small" />
-                  : <Send size={20} color="#fff" />
-                }
-                <Text style={styles.rephraseButtonText}>
-                  {isLoading ? '変換中...' : '✨ 変換する'}
-                </Text>
-                {!isPro && (
-                  <Text style={styles.countText}>
-                    ({rephraseCount}/5)
+            <Animated.View style={{ transform: [{ scale: isLoading ? pulseAnim : 1 }] }}>
+              <TouchableOpacity
+                style={[styles.rephraseButton, isLoading && styles.disabledButton]}
+                onPress={handleRephrase}
+                disabled={isLoading}
+                activeOpacity={0.8}
+              >
+                <LinearGradient colors={['#8B5CF6', '#EC4899']} style={styles.buttonGradient}>
+                  {isLoading
+                    ? <ActivityIndicator color="#fff" size="small" />
+                    : <Send size={20} color="#fff" />
+                  }
+                  <Text style={styles.rephraseButtonText}>
+                    {isLoading ? '変換中...' : '✨ 変換する'}
                   </Text>
-                )}
-              </LinearGradient>
-            </TouchableOpacity>
+                  {!isPro && (
+                    <Text style={styles.countText}>
+                      ({rephraseCount}/5)
+                    </Text>
+                  )}
+                </LinearGradient>
+              </TouchableOpacity>
+            </Animated.View>
           </View>
         </View>
 
