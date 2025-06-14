@@ -11,6 +11,7 @@ import {
   Platform,
   FlatList,
   Dimensions,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Send, Sparkles, Crown, Share2 } from 'lucide-react-native';
@@ -20,8 +21,8 @@ import { ShareModal } from '@/components/ShareModal';
 import { REPHRASE_STYLES, getActiveStyles, getStyleById } from '@/config/styles';
 
 const { width: screenWidth } = Dimensions.get('window');
-const CARD_WIDTH = screenWidth * 0.8;
-const CARD_SPACING = 20;
+const CARD_WIDTH = screenWidth * 0.62; // 62%に縮小（左右に見切れるUX）
+const CARD_SPACING = 16;
 
 export default function RephraseScreen() {
   const { apiKey, isPro, rephraseCount, setRephraseCount } = useSettings();
@@ -36,25 +37,29 @@ export default function RephraseScreen() {
   const activeStyles = getActiveStyles();
   const selectedStyle = activeStyles[selectedStyleIndex];
 
-  // デバッグ用コンソールログ
+  // 詳細デバッグログ
   console.log('=== コトバクラフト デバッグ情報 ===');
-  console.log('API Key 設定状況:', apiKey ? 'あり' : 'なし');
+  console.log('API Key 設定状況:', apiKey ? `設定済み (${apiKey.substring(0, 7)}...)` : '未設定');
   console.log('選択中のスタイル:', selectedStyle);
+  console.log('選択中のスタイルインデックス:', selectedStyleIndex);
   console.log('アクティブスタイル数:', activeStyles.length);
+  console.log('全スタイル数:', REPHRASE_STYLES.length);
 
   const handleRephrase = async () => {
     console.log('=== 言語生成開始 ===');
+    console.log('入力チェック開始...');
     
-    // APIキーの確認
+    // APIキーの詳細確認
     if (!apiKey || apiKey.trim() === '') {
-      console.error('APIキーが未設定');
+      console.error('❌ APIキーが未設定');
       Alert.alert('APIキー未設定', 'Settings画面でOpenAI APIキーを設定してください。');
       return;
     }
+    console.log('✅ APIキー確認済み');
 
     // 無料ユーザーの制限チェック
     if (!isPro && rephraseCount >= 5) {
-      console.log('無料版の制限に達しました');
+      console.log('❌ 無料版の制限に達しました');
       Alert.alert(
         '制限に達しました',
         '5回までの無料利用が完了しました。有料版にアップグレードして続けて利用できます。',
@@ -68,71 +73,127 @@ export default function RephraseScreen() {
       );
       return;
     }
+    console.log(`✅ 利用制限チェック済み (${rephraseCount}/5)`);
 
+    // 入力文章チェック
     if (!inputText.trim()) {
-      console.error('入力文章が空');
+      console.error('❌ 入力文章が空');
       Alert.alert('エラー', '文章を入力してください');
       return;
     }
+    console.log('✅ 入力文章確認済み:', inputText);
 
+    // スタイル選択チェック
     if (!selectedStyle) {
-      console.error('スタイルが選択されていません');
+      console.error('❌ スタイルが選択されていません');
+      console.error('selectedStyleIndex:', selectedStyleIndex);
+      console.error('activeStyles:', activeStyles);
       Alert.alert('エラー', 'スタイルを選択してください');
       return;
     }
+    console.log('✅ スタイル確認済み:', selectedStyle.name);
 
-    console.log('入力文章:', inputText);
-    console.log('選択スタイル:', selectedStyle.name);
-    console.log('使用プロンプト:', selectedStyle.prompt);
+    // プロンプト確認
+    if (!selectedStyle.prompt || selectedStyle.prompt.trim() === '') {
+      console.error('❌ スタイルのプロンプトが空です');
+      console.error('selectedStyle.prompt:', selectedStyle.prompt);
+      Alert.alert('エラー', 'スタイル設定にエラーがあります');
+      return;
+    }
+    console.log('✅ プロンプト確認済み:', selectedStyle.prompt);
+
+    // APIリクエスト準備
+    const systemMessage = 'あなたは文章を様々なスタイルで言い換える専門家です。指定されたスタイルに従って、自然で魅力的な日本語の文章に言い換えてください。元の意味を保ちながら、指定されたスタイルの特徴を明確に表現してください。';
+    const userMessage = `${selectedStyle.prompt}\n\n文章: ${inputText}`;
+    
+    const requestPayload = {
+      model: 'gpt-4o',
+      messages: [
+        {
+          role: 'system',
+          content: systemMessage
+        },
+        {
+          role: 'user',
+          content: userMessage,
+        },
+      ],
+      max_tokens: 500,
+      temperature: 0.7,
+    };
+
+    console.log('📤 API Request Payload:');
+    console.log('Model:', requestPayload.model);
+    console.log('System Message:', systemMessage);
+    console.log('User Message:', userMessage);
+    console.log('Full Payload:', JSON.stringify(requestPayload, null, 2));
 
     setIsLoading(true);
     try {
+      console.log('🌐 API呼び出し開始...');
+      
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${apiKey}`,
         },
-        body: JSON.stringify({
-          model: 'gpt-4o',
-          messages: [
-            {
-              role: 'system',
-              content: 'あなたは文章を様々なスタイルで言い換える専門家です。指定されたスタイルに従って、自然で魅力的な日本語の文章に言い換えてください。元の意味を保ちながら、指定されたスタイルの特徴を明確に表現してください。'
-            },
-            {
-              role: 'user',
-              content: `${selectedStyle.prompt}\n\n文章: ${inputText}`,
-            },
-          ],
-          max_tokens: 500,
-          temperature: 0.7,
-        }),
+        body: JSON.stringify(requestPayload),
       });
 
-      console.log('API Response Status:', response.status);
+      console.log('📥 API Response Status:', response.status);
+      console.log('📥 API Response Headers:', response.headers);
+
       const data = await response.json();
-      console.log('API Response Data:', data);
+      console.log('📥 API Response Data:', JSON.stringify(data, null, 2));
 
       if (response.ok) {
-        const result = data.choices[0].message.content.trim();
-        console.log('生成結果:', result);
+        if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+          console.error('❌ API Response構造が不正です');
+          console.error('choices:', data.choices);
+          Alert.alert('エラー', 'AIからの応答形式が不正です');
+          return;
+        }
+
+        const result = data.choices[0].message.content?.trim();
+        if (!result) {
+          console.error('❌ API Response内容が空です');
+          console.error('message.content:', data.choices[0].message.content);
+          Alert.alert('エラー', 'AIからの応答が空です');
+          return;
+        }
+
+        console.log('✅ 生成結果:', result);
         setRephraseResult(result);
         setRephraseCount(rephraseCount + 1);
-        console.log('=== 言語生成成功 ===');
+        console.log('🎉 言語生成成功！');
       } else {
-        console.error('API Error:', data);
+        console.error('❌ API Error Response:', data);
         if (response.status === 401) {
+          console.error('❌ 認証エラー: APIキーが無効');
           Alert.alert('APIキーエラー', 'APIキーが無効です。Settings画面で正しいAPIキーを設定してください。');
+        } else if (response.status === 429) {
+          console.error('❌ レート制限エラー');
+          Alert.alert('エラー', 'APIの利用制限に達しました。しばらく時間をおいてから再試行してください。');
+        } else if (response.status === 500) {
+          console.error('❌ サーバーエラー');
+          Alert.alert('エラー', 'OpenAIサーバーでエラーが発生しました。しばらく時間をおいてから再試行してください。');
         } else {
-          Alert.alert('エラー', data.error?.message || '処理中にエラーが発生しました');
+          console.error('❌ その他のAPIエラー');
+          Alert.alert('エラー', data.error?.message || `処理中にエラーが発生しました (${response.status})`);
         }
       }
     } catch (error) {
-      console.error('Network Error:', error);
-      Alert.alert('エラー', 'ネットワークエラーが発生しました');
+      console.error('❌ Network Error:', error);
+      console.error('Error details:', {
+        name: error instanceof Error ? error.name : 'Unknown',
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : 'No stack trace'
+      });
+      Alert.alert('エラー', 'ネットワークエラーが発生しました。インターネット接続を確認してください。');
     } finally {
       setIsLoading(false);
+      console.log('=== 言語生成処理完了 ===');
     }
   };
 
@@ -145,7 +206,7 @@ export default function RephraseScreen() {
   };
 
   const onStyleSelect = (index: number) => {
-    console.log('スタイル選択:', activeStyles[index].name);
+    console.log('スタイル選択:', activeStyles[index]?.name || 'undefined');
     setSelectedStyleIndex(index);
     flatListRef.current?.scrollToIndex({ 
       index, 
@@ -165,6 +226,7 @@ export default function RephraseScreen() {
           { backgroundColor: isSelected ? item.color : '#ffffff' }
         ]}
         onPress={() => onStyleSelect(index)}
+        activeOpacity={0.8}
       >
         <View style={styles.styleCardContent}>
           <Text style={styles.styleEmoji}>{item.emoji}</Text>
@@ -209,8 +271,12 @@ export default function RephraseScreen() {
   const showLimitWarning = !isPro && rephraseCount >= 4;
 
   return (
-    <LinearGradient colors={['#8B5CF6', '#EC4899', '#F59E0B']} style={styles.container}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+    <KeyboardAvoidingView 
+      style={styles.container} 
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <LinearGradient colors={['#8B5CF6', '#EC4899', '#F59E0B']} style={styles.container}>
+        {/* ヘッダー */}
         <View style={styles.header}>
           <Text style={styles.title}>コトバクラフト</Text>
           <Text style={styles.subtitle}>AIが文章を様々なスタイルで変換します</Text>
@@ -255,129 +321,137 @@ export default function RephraseScreen() {
           </View>
         )}
 
-        {/* メインカード */}
-        <View style={styles.mainCard}>
-          {/* 文章入力 */}
-          <View style={styles.inputSection}>
-            <Text style={styles.sectionTitle}>文章を入力</Text>
-            <TextInput
-              style={styles.textInput}
-              placeholder="例: 今日はいい天気ですね"
-              value={inputText}
-              onChangeText={setInputText}
-              multiline
-              numberOfLines={4}
-              placeholderTextColor="#9ca3af"
-            />
-          </View>
-
-          {/* 横スワイプ リールUI スタイル選択 */}
-          <View style={styles.styleSection}>
-            <Text style={styles.sectionTitle}>スタイルを選択</Text>
-            <Text style={styles.styleSectionSubtitle}>
-              スワイプで文化的スタイルを探索しよう！
-            </Text>
-            
-            {/* リール風の横スワイプUI */}
-            <View style={styles.reelContainer}>
-              <FlatList
-                ref={flatListRef}
-                data={activeStyles}
-                renderItem={renderStyleCard}
-                keyExtractor={(item) => item.id}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                snapToInterval={CARD_WIDTH + CARD_SPACING}
-                decelerationRate="fast"
-                contentContainerStyle={styles.styleCarousel}
-                onMomentumScrollEnd={(event) => {
-                  const index = Math.round(event.nativeEvent.contentOffset.x / (CARD_WIDTH + CARD_SPACING));
-                  if (index !== selectedStyleIndex) {
-                    setSelectedStyleIndex(index);
-                  }
-                }}
-                getItemLayout={(data, index) => ({
-                  length: CARD_WIDTH + CARD_SPACING,
-                  offset: (CARD_WIDTH + CARD_SPACING) * index,
-                  index,
-                })}
-              />
-              
-              {/* スワイプヒント */}
-              <View style={styles.swipeHint}>
-                <Text style={styles.swipeHintText}>← スワイプで探索 →</Text>
+        {/* メインコンテンツエリア */}
+        <View style={styles.contentContainer}>
+          {/* 上部スクロールエリア */}
+          <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+            <View style={styles.mainCard}>
+              {/* 文章入力 */}
+              <View style={styles.inputSection}>
+                <Text style={styles.sectionTitle}>文章を入力</Text>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="例: 今日はいい天気ですね"
+                  value={inputText}
+                  onChangeText={setInputText}
+                  multiline
+                  numberOfLines={4}
+                  placeholderTextColor="#9ca3af"
+                />
               </View>
-              
-              {/* スタイルインジケーター */}
-              <View style={styles.styleIndicator}>
-                {activeStyles.map((_, index) => (
-                  <View
-                    key={index}
-                    style={[
-                      styles.indicatorDot,
-                      { backgroundColor: index === selectedStyleIndex ? '#8B5CF6' : '#e5e7eb' }
-                    ]}
-                  />
-                ))}
-              </View>
-            </View>
-          </View>
 
-          {/* 言い換えボタン */}
-          <TouchableOpacity
-            style={[styles.rephraseButton, isLoading && styles.disabledButton]}
-            onPress={handleRephrase}
-            disabled={isLoading}
-          >
-            <LinearGradient colors={['#8B5CF6', '#EC4899']} style={styles.buttonGradient}>
-              {isLoading
-                ? <ActivityIndicator color="#fff" size="small" />
-                : <Send size={20} color="#fff" />
-              }
-              <Text style={styles.rephraseButtonText}>
-                {isLoading ? '変換中...' : '✨ 変換する'}
-              </Text>
-              {!isPro && (
-                <Text style={styles.countText}>
-                  ({rephraseCount}/5)
+              {/* 横スワイプ リールUI スタイル選択 */}
+              <View style={styles.styleSection}>
+                <Text style={styles.sectionTitle}>スタイルを選択</Text>
+                <Text style={styles.styleSectionSubtitle}>
+                  スワイプで文化的スタイルを探索しよう！
                 </Text>
-              )}
-            </LinearGradient>
-          </TouchableOpacity>
-
-          {/* 言い換え結果 */}
-          {rephraseResult ? (
-            <View style={styles.resultSection}>
-              <View style={styles.resultHeader}>
-                <Sparkles size={20} color="#8B5CF6" />
-                <Text style={styles.sectionTitle}>変換結果</Text>
-                <View style={styles.resultStyleTag}>
-                  <Text style={styles.resultStyleText}>{selectedStyle.name}</Text>
+                
+                {/* リール風の横スワイプUI */}
+                <View style={styles.reelContainer}>
+                  <FlatList
+                    ref={flatListRef}
+                    data={activeStyles}
+                    renderItem={renderStyleCard}
+                    keyExtractor={(item) => item.id}
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    snapToInterval={CARD_WIDTH + CARD_SPACING}
+                    decelerationRate="fast"
+                    contentContainerStyle={styles.styleCarousel}
+                    onMomentumScrollEnd={(event) => {
+                      const index = Math.round(event.nativeEvent.contentOffset.x / (CARD_WIDTH + CARD_SPACING));
+                      if (index !== selectedStyleIndex && index >= 0 && index < activeStyles.length) {
+                        setSelectedStyleIndex(index);
+                      }
+                    }}
+                    getItemLayout={(data, index) => ({
+                      length: CARD_WIDTH + CARD_SPACING,
+                      offset: (CARD_WIDTH + CARD_SPACING) * index,
+                      index,
+                    })}
+                  />
+                  
+                  {/* スワイプヒント */}
+                  <View style={styles.swipeHint}>
+                    <Text style={styles.swipeHintText}>← スワイプで探索 →</Text>
+                  </View>
+                  
+                  {/* スタイルインジケーター */}
+                  <View style={styles.styleIndicator}>
+                    {activeStyles.map((_, index) => (
+                      <View
+                        key={index}
+                        style={[
+                          styles.indicatorDot,
+                          { backgroundColor: index === selectedStyleIndex ? '#8B5CF6' : '#e5e7eb' }
+                        ]}
+                      />
+                    ))}
+                  </View>
                 </View>
               </View>
-              <View style={styles.resultContainer}>
-                <Text style={styles.resultText}>{rephraseResult}</Text>
-                <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
-                  <Share2 size={16} color="#EC4899" />
-                  <Text style={styles.shareButtonText}>SNSでシェア</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          ) : null}
-        </View>
-      </ScrollView>
 
-      <ShareModal
-        visible={showShareModal}
-        onClose={() => setShowShareModal(false)}
-        rephraseText={rephraseResult}
-        style={selectedStyle?.id || 'meigen'}
-        onUpgradePress={() => {
-          setShowShareModal(false);
-          navigateToSettings();
-        }}
-      />
-    </LinearGradient>
+              {/* 変換結果 */}
+              {rephraseResult ? (
+                <View style={styles.resultSection}>
+                  <View style={styles.resultHeader}>
+                    <Sparkles size={20} color="#8B5CF6" />
+                    <Text style={styles.sectionTitle}>変換結果</Text>
+                    <View style={styles.resultStyleTag}>
+                      <Text style={styles.resultStyleText}>{selectedStyle.name}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.resultContainer}>
+                    <Text style={styles.resultText}>{rephraseResult}</Text>
+                    <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
+                      <Share2 size={16} color="#EC4899" />
+                      <Text style={styles.shareButtonText}>SNSでシェア</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ) : null}
+            </View>
+          </ScrollView>
+
+          {/* 固定変換ボタン */}
+          <View style={styles.fixedButtonContainer}>
+            <TouchableOpacity
+              style={[styles.rephraseButton, isLoading && styles.disabledButton]}
+              onPress={handleRephrase}
+              disabled={isLoading}
+              activeOpacity={0.8}
+            >
+              <LinearGradient colors={['#8B5CF6', '#EC4899']} style={styles.buttonGradient}>
+                {isLoading
+                  ? <ActivityIndicator color="#fff" size="small" />
+                  : <Send size={20} color="#fff" />
+                }
+                <Text style={styles.rephraseButtonText}>
+                  {isLoading ? '変換中...' : '✨ 変換する'}
+                </Text>
+                {!isPro && (
+                  <Text style={styles.countText}>
+                    ({rephraseCount}/5)
+                  </Text>
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <ShareModal
+          visible={showShareModal}
+          onClose={() => setShowShareModal(false)}
+          rephraseText={rephraseResult}
+          style={selectedStyle?.id || 'meigen'}
+          onUpgradePress={() => {
+            setShowShareModal(false);
+            navigateToSettings();
+          }}
+        />
+      </LinearGradient>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -385,13 +459,10 @@ const styles = StyleSheet.create({
   container: { 
     flex: 1 
   },
-  scrollView: { 
-    flex: 1, 
-    paddingTop: Platform.OS === 'ios' ? 60 : 40 
-  },
   header: { 
     alignItems: 'center', 
-    marginBottom: 32, 
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingBottom: 24, 
     paddingHorizontal: 20 
   },
   title: { 
@@ -478,6 +549,13 @@ const styles = StyleSheet.create({
     color: '#F59E0B',
     textDecorationLine: 'underline',
   },
+  contentContainer: {
+    flex: 1,
+    flexDirection: 'column',
+  },
+  scrollView: { 
+    flex: 1,
+  },
   mainCard: { 
     backgroundColor: '#fff', 
     marginHorizontal: 20, 
@@ -531,7 +609,7 @@ const styles = StyleSheet.create({
     width: CARD_WIDTH,
     marginHorizontal: CARD_SPACING / 2,
     borderRadius: 20,
-    padding: 24,
+    padding: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.15,
@@ -539,7 +617,7 @@ const styles = StyleSheet.create({
     elevation: 8,
     borderWidth: 2,
     borderColor: '#e5e7eb',
-    minHeight: 200,
+    minHeight: 180,
   },
   selectedStyleCard: {
     shadowOpacity: 0.25,
@@ -555,21 +633,21 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   styleEmoji: {
-    fontSize: 40,
-    marginBottom: 16,
+    fontSize: 36,
+    marginBottom: 12,
   },
   styleCardTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontFamily: 'Inter-Bold',
-    marginBottom: 8,
+    marginBottom: 6,
     textAlign: 'center',
   },
   styleCardDescription: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: 'Inter-Regular',
     textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 12,
+    lineHeight: 18,
+    marginBottom: 10,
   },
   categoryBadge: {
     paddingHorizontal: 8,
@@ -578,7 +656,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   categoryText: {
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: 'Inter-Medium',
   },
   limitedBadge: {
@@ -616,38 +694,6 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-  },
-  rephraseButton: { 
-    marginBottom: 24, 
-    borderRadius: 16, 
-    overflow: 'hidden', 
-    shadowColor: '#000', 
-    shadowOffset: { width: 0, height: 4 }, 
-    shadowOpacity: 0.2, 
-    shadowRadius: 8, 
-    elevation: 5 
-  },
-  disabledButton: { 
-    opacity: 0.7 
-  },
-  buttonGradient: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    paddingVertical: 18, 
-    paddingHorizontal: 24, 
-    gap: 8 
-  },
-  rephraseButtonText: { 
-    fontSize: 18, 
-    fontFamily: 'Inter-SemiBold', 
-    color: '#fff' 
-  },
-  countText: { 
-    fontSize: 14, 
-    fontFamily: 'Inter-Regular', 
-    color: '#fff', 
-    opacity: 0.8 
   },
   resultSection: {
     borderTopWidth: 1,
@@ -704,5 +750,41 @@ const styles = StyleSheet.create({
     fontSize: 16, 
     fontFamily: 'Inter-SemiBold', 
     color: '#EC4899' 
+  },
+  fixedButtonContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: 'transparent',
+  },
+  rephraseButton: { 
+    borderRadius: 16, 
+    overflow: 'hidden', 
+    shadowColor: '#000', 
+    shadowOffset: { width: 0, height: 4 }, 
+    shadowOpacity: 0.2, 
+    shadowRadius: 8, 
+    elevation: 5 
+  },
+  disabledButton: { 
+    opacity: 0.7 
+  },
+  buttonGradient: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    paddingVertical: 18, 
+    paddingHorizontal: 24, 
+    gap: 8 
+  },
+  rephraseButtonText: { 
+    fontSize: 18, 
+    fontFamily: 'Inter-SemiBold', 
+    color: '#fff' 
+  },
+  countText: { 
+    fontSize: 14, 
+    fontFamily: 'Inter-Regular', 
+    color: '#fff', 
+    opacity: 0.8 
   },
 });
