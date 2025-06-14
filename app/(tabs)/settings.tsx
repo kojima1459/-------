@@ -12,7 +12,7 @@ import {
   Linking,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Key, Globe, Palette, Info, Crown, X, Hash, Shield, FileText, Mail, Home } from 'lucide-react-native';
+import { Key, Globe, Palette, Info, Crown, X, Hash, Shield, FileText, Mail, Chrome as Home } from 'lucide-react-native';
 import { useSettings } from '@/hooks/SettingsContext';
 import { useRouter } from 'expo-router';
 
