@@ -37,100 +37,179 @@ export default function RephraseScreen() {
   const activeStyles = getActiveStyles();
   const selectedStyle = activeStyles[selectedStyleIndex];
 
-  // 詳細デバッグログ
-  console.log('=== コトバクラフト デバッグ情報 ===');
-  console.log('API Key 設定状況:', apiKey ? `設定済み (${apiKey.substring(0, 7)}...)` : '未設定');
-  console.log('選択中のスタイル:', selectedStyle);
-  console.log('選択中のスタイルインデックス:', selectedStyleIndex);
-  console.log('アクティブスタイル数:', activeStyles.length);
-  console.log('全スタイル数:', REPHRASE_STYLES.length);
+  // === 🔍 STEP 1: 基本情報デバッグ ===
+  console.log('\n=== コトバクラフト デバッグ情報 ===');
+  console.log('🔑 API Key 設定状況:', apiKey ? `設定済み (${apiKey.substring(0, 10)}...)` : '❌ 未設定');
+  console.log('📊 REPHRASE_STYLES 総数:', REPHRASE_STYLES.length);
+  console.log('📊 アクティブスタイル配列:', activeStyles);
+  console.log('📊 アクティブスタイル数:', activeStyles.length);
+  console.log('📊 選択中インデックス:', selectedStyleIndex);
+  console.log('📊 選択中スタイル Raw:', selectedStyle);
+  
+  // === 🔍 STEP 2: 選択スタイルの詳細検証 ===
+  if (selectedStyle) {
+    console.log('✅ 選択スタイル詳細:');
+    console.log('  - ID:', selectedStyle.id);
+    console.log('  - 名前:', selectedStyle.name);
+    console.log('  - 説明:', selectedStyle.description);
+    console.log('  - プロンプト存在:', !!selectedStyle.prompt);
+    console.log('  - プロンプト長:', selectedStyle.prompt ? selectedStyle.prompt.length : 0);
+    console.log('  - プロンプト内容:', selectedStyle.prompt || '❌ EMPTY');
+  } else {
+    console.error('❌ selectedStyle が undefined です！');
+    console.error('  - selectedStyleIndex:', selectedStyleIndex);
+    console.error('  - activeStyles.length:', activeStyles.length);
+    console.error('  - activeStyles[0]:', activeStyles[0]);
+  }
 
   const handleRephrase = async () => {
-    console.log('=== 言語生成開始 ===');
-    console.log('入力チェック開始...');
+    console.log('\n🚀 === 言語生成プロセス開始 ===');
     
-    // APIキーの詳細確認
+    // === 🔍 STEP 3: 入力検証（詳細） ===
+    console.log('📋 Step 1: 入力データ検証');
+    console.log('  - APIキー:', apiKey ? `✅ 設定済み (${apiKey.length}文字)` : '❌ 未設定');
+    console.log('  - Pro状態:', isPro ? '✅ Pro版' : '📱 無料版');
+    console.log('  - 利用回数:', `${rephraseCount}/5`);
+    console.log('  - 入力文章:', inputText ? `✅ "${inputText}"` : '❌ 空');
+    console.log('  - 選択スタイル:', selectedStyle ? `✅ ${selectedStyle.name}` : '❌ 未選択');
+
+    // APIキーチェック
     if (!apiKey || apiKey.trim() === '') {
-      console.error('❌ APIキーが未設定');
+      console.error('❌ エラー: APIキーが未設定');
       Alert.alert('APIキー未設定', 'Settings画面でOpenAI APIキーを設定してください。');
       return;
     }
-    console.log('✅ APIキー確認済み');
 
-    // 無料ユーザーの制限チェック
+    // 制限チェック
     if (!isPro && rephraseCount >= 5) {
-      console.log('❌ 無料版の制限に達しました');
+      console.error('❌ エラー: 無料版制限に達しました');
       Alert.alert(
         '制限に達しました',
         '5回までの無料利用が完了しました。有料版にアップグレードして続けて利用できます。',
         [
           { text: 'キャンセル', style: 'cancel' },
-          { 
-            text: '有料版にアップグレード', 
-            onPress: () => router.push('/settings')
-          },
+          { text: '有料版にアップグレード', onPress: () => router.push('/settings') },
         ]
       );
       return;
     }
-    console.log(`✅ 利用制限チェック済み (${rephraseCount}/5)`);
 
     // 入力文章チェック
     if (!inputText.trim()) {
-      console.error('❌ 入力文章が空');
+      console.error('❌ エラー: 入力文章が空');
       Alert.alert('エラー', '文章を入力してください');
       return;
     }
-    console.log('✅ 入力文章確認済み:', inputText);
 
-    // スタイル選択チェック
+    // === 🔍 STEP 4: スタイル選択の詳細検証 ===
+    console.log('\n📋 Step 2: スタイル選択詳細検証');
+    
     if (!selectedStyle) {
-      console.error('❌ スタイルが選択されていません');
-      console.error('selectedStyleIndex:', selectedStyleIndex);
-      console.error('activeStyles:', activeStyles);
-      Alert.alert('エラー', 'スタイルを選択してください');
+      console.error('❌ 致命的エラー: selectedStyle が null/undefined');
+      console.error('  デバッグ情報:');
+      console.error('  - selectedStyleIndex:', selectedStyleIndex);
+      console.error('  - activeStyles:', activeStyles);
+      console.error('  - activeStyles.length:', activeStyles.length);
+      console.error('  - REPHRASE_STYLES:', REPHRASE_STYLES);
+      Alert.alert('エラー', 'スタイル選択にエラーがあります。アプリを再起動してください。');
       return;
     }
-    console.log('✅ スタイル確認済み:', selectedStyle.name);
 
-    // プロンプト確認
-    if (!selectedStyle.prompt || selectedStyle.prompt.trim() === '') {
-      console.error('❌ スタイルのプロンプトが空です');
-      console.error('selectedStyle.prompt:', selectedStyle.prompt);
-      Alert.alert('エラー', 'スタイル設定にエラーがあります');
+    console.log('✅ スタイル選択検証完了:');
+    console.log('  - スタイルID:', selectedStyle.id);
+    console.log('  - スタイル名:', selectedStyle.name);
+
+    // === 🔍 STEP 5: プロンプト詳細検証 ===
+    console.log('\n📋 Step 3: プロンプト詳細検証');
+    
+    if (!selectedStyle.prompt) {
+      console.error('❌ 致命的エラー: selectedStyle.prompt が存在しません');
+      console.error('  - selectedStyle:', selectedStyle);
+      console.error('  - prompt プロパティ:', selectedStyle.prompt);
+      Alert.alert('エラー', 'スタイル設定にプロンプトが設定されていません。');
       return;
     }
-    console.log('✅ プロンプト確認済み:', selectedStyle.prompt);
 
-    // APIリクエスト準備
+    if (selectedStyle.prompt.trim() === '') {
+      console.error('❌ 致命的エラー: selectedStyle.prompt が空文字');
+      console.error('  - prompt 内容:', `"${selectedStyle.prompt}"`);
+      Alert.alert('エラー', 'スタイルのプロンプトが空です。');
+      return;
+    }
+
+    console.log('✅ プロンプト検証完了:');
+    console.log('  - プロンプト長:', selectedStyle.prompt.length);
+    console.log('  - プロンプト内容:', selectedStyle.prompt);
+
+    // === 🔍 STEP 6: メッセージ構築詳細検証 ===
+    console.log('\n📋 Step 4: APIメッセージ構築');
+    
     const systemMessage = 'あなたは文章を様々なスタイルで言い換える専門家です。指定されたスタイルに従って、自然で魅力的な日本語の文章に言い換えてください。元の意味を保ちながら、指定されたスタイルの特徴を明確に表現してください。';
     const userMessage = `${selectedStyle.prompt}\n\n文章: ${inputText}`;
     
+    const messages = [
+      {
+        role: 'system' as const,
+        content: systemMessage
+      },
+      {
+        role: 'user' as const,
+        content: userMessage,
+      },
+    ];
+
     const requestPayload = {
       model: 'gpt-4o',
-      messages: [
-        {
-          role: 'system',
-          content: systemMessage
-        },
-        {
-          role: 'user',
-          content: userMessage,
-        },
-      ],
+      messages: messages,
       max_tokens: 500,
       temperature: 0.7,
     };
 
-    console.log('📤 API Request Payload:');
-    console.log('Model:', requestPayload.model);
-    console.log('System Message:', systemMessage);
-    console.log('User Message:', userMessage);
-    console.log('Full Payload:', JSON.stringify(requestPayload, null, 2));
+    console.log('✅ メッセージ構築完了:');
+    console.log('  - システムメッセージ長:', systemMessage.length);
+    console.log('  - ユーザーメッセージ長:', userMessage.length);
+    console.log('  - システムメッセージ:', systemMessage);
+    console.log('  - ユーザーメッセージ:', userMessage);
+    
+    // === 🔍 ⭐️ ここが一番重要：messages配列の詳細確認 ⭐️ ===
+    console.log('\n🔍 === MESSAGES配列詳細確認 ===');
+    console.log('  - messages配列型:', Array.isArray(messages) ? 'Array' : typeof messages);
+    console.log('  - messages配列長:', messages.length);
+    console.log('  - messages[0] 存在:', !!messages[0]);
+    console.log('  - messages[0] 詳細:', messages[0]);
+    console.log('  - messages[0].role:', messages[0]?.role);
+    console.log('  - messages[0].content 存在:', !!messages[0]?.content);
+    console.log('  - messages[0].content 長:', messages[0]?.content?.length || 0);
+    console.log('  - messages[0].content 内容:', messages[0]?.content);
+    console.log('  - messages[1] 存在:', !!messages[1]);
+    console.log('  - messages[1] 詳細:', messages[1]);
+    console.log('  - messages[1].role:', messages[1]?.role);
+    console.log('  - messages[1].content 存在:', !!messages[1]?.content);
+    console.log('  - messages[1].content 長:', messages[1]?.content?.length || 0);
+    console.log('  - messages[1].content 内容:', messages[1]?.content);
+    
+    // === 🔍 完全なペイロード確認 ===
+    console.log('\n🔍 === 完全なペイロード確認 ===');
+    console.log('  - requestPayload型:', typeof requestPayload);
+    console.log('  - requestPayload.model:', requestPayload.model);
+    console.log('  - requestPayload.messages 存在:', !!requestPayload.messages);
+    console.log('  - requestPayload.messages 型:', Array.isArray(requestPayload.messages) ? 'Array' : typeof requestPayload.messages);
+    console.log('  - requestPayload.messages 長:', requestPayload.messages.length);
+    console.log('  - requestPayload.max_tokens:', requestPayload.max_tokens);
+    console.log('  - requestPayload.temperature:', requestPayload.temperature);
+    console.log('  - 完全なペイロード JSON:');
+    console.log(JSON.stringify(requestPayload, null, 2));
 
+    // === 🔍 STEP 7: API呼び出し実行 ===
+    console.log('\n📋 Step 5: API呼び出し実行');
+    
     setIsLoading(true);
+    
     try {
-      console.log('🌐 API呼び出し開始...');
+      console.log('🌐 API Request 送信中...');
+      console.log('  - URL: https://api.openai.com/v1/chat/completions');
+      console.log('  - Method: POST');
+      console.log('  - Headers: Content-Type: application/json, Authorization: Bearer [HIDDEN]');
       
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -141,36 +220,92 @@ export default function RephraseScreen() {
         body: JSON.stringify(requestPayload),
       });
 
-      console.log('📥 API Response Status:', response.status);
-      console.log('📥 API Response Headers:', response.headers);
+      console.log('📥 API Response 受信:');
+      console.log('  - Status:', response.status);
+      console.log('  - StatusText:', response.statusText);
+      console.log('  - Headers:', Object.fromEntries(response.headers.entries()));
 
       const data = await response.json();
-      console.log('📥 API Response Data:', JSON.stringify(data, null, 2));
+      console.log('📥 API Response Data:');
+      console.log(JSON.stringify(data, null, 2));
 
       if (response.ok) {
-        if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-          console.error('❌ API Response構造が不正です');
-          console.error('choices:', data.choices);
-          Alert.alert('エラー', 'AIからの応答形式が不正です');
+        // === 🔍 STEP 8: レスポンス構造詳細検証 ===
+        console.log('\n📋 Step 6: レスポンス構造検証');
+        
+        console.log('  - data.choices 存在:', !!data.choices);
+        console.log('  - data.choices 型:', Array.isArray(data.choices) ? 'Array' : typeof data.choices);
+        console.log('  - data.choices 長:', data.choices ? data.choices.length : 0);
+        
+        if (!data.choices || !Array.isArray(data.choices) || data.choices.length === 0) {
+          console.error('❌ API Response エラー: choices が存在しないか空です');
+          console.error('  - data.choices:', data.choices);
+          Alert.alert('エラー', 'AIからの応答形式が不正です（choices不正）');
+          return;
+        }
+        
+        console.log('  - data.choices[0] 存在:', !!data.choices[0]);
+        console.log('  - data.choices[0] 型:', typeof data.choices[0]);
+        console.log('  - data.choices[0]:', data.choices[0]);
+        
+        if (!data.choices[0]) {
+          console.error('❌ API Response エラー: choices[0] が存在しません');
+          Alert.alert('エラー', 'AIからの応答形式が不正です（choices[0]不正）');
+          return;
+        }
+        
+        console.log('  - data.choices[0].message 存在:', !!data.choices[0].message);
+        console.log('  - data.choices[0].message 型:', typeof data.choices[0].message);
+        console.log('  - data.choices[0].message:', data.choices[0].message);
+        
+        if (!data.choices[0].message) {
+          console.error('❌ API Response エラー: message が存在しません');
+          Alert.alert('エラー', 'AIからの応答形式が不正です（message不正）');
+          return;
+        }
+        
+        const messageContent = data.choices[0].message.content;
+        console.log('  - message.content 存在:', !!messageContent);
+        console.log('  - message.content 型:', typeof messageContent);
+        console.log('  - message.content 長:', messageContent ? messageContent.length : 0);
+        console.log('  - message.content 内容:', messageContent);
+        
+        if (!messageContent) {
+          console.error('❌ API Response エラー: message.content が存在しません');
+          console.error('  - content value:', messageContent);
+          Alert.alert('エラー', 'AIからの応答内容が空です');
           return;
         }
 
-        const result = data.choices[0].message.content?.trim();
+        const result = messageContent.trim();
         if (!result) {
-          console.error('❌ API Response内容が空です');
-          console.error('message.content:', data.choices[0].message.content);
-          Alert.alert('エラー', 'AIからの応答が空です');
+          console.error('❌ API Response エラー: trimmed content が空です');
+          console.error('  - trimmed content:', `"${result}"`);
+          Alert.alert('エラー', 'AIからの応答内容が空です（trim後）');
           return;
         }
 
-        console.log('✅ 生成結果:', result);
+        console.log('🎉 === 生成成功！ ===');
+        console.log('  - 生成結果:', result);
+        console.log('  - 生成結果長:', result.length);
+        
         setRephraseResult(result);
         setRephraseCount(rephraseCount + 1);
-        console.log('🎉 言語生成成功！');
+        
+        console.log('✅ 状態更新完了');
+        console.log('  - 新しい利用回数:', rephraseCount + 1);
+        
       } else {
-        console.error('❌ API Error Response:', data);
+        // === 🔍 エラーレスポンス詳細解析 ===
+        console.error('\n❌ === API エラーレスポンス詳細解析 ===');
+        console.error('  - Status:', response.status);
+        console.error('  - StatusText:', response.statusText);
+        console.error('  - Error Data:', data);
+        
         if (response.status === 401) {
           console.error('❌ 認証エラー: APIキーが無効');
+          console.error('  - 使用中のAPIキー長:', apiKey.length);
+          console.error('  - APIキー開始:', apiKey.substring(0, 10));
           Alert.alert('APIキーエラー', 'APIキーが無効です。Settings画面で正しいAPIキーを設定してください。');
         } else if (response.status === 429) {
           console.error('❌ レート制限エラー');
@@ -180,20 +315,24 @@ export default function RephraseScreen() {
           Alert.alert('エラー', 'OpenAIサーバーでエラーが発生しました。しばらく時間をおいてから再試行してください。');
         } else {
           console.error('❌ その他のAPIエラー');
+          console.error('  - Error Message:', data.error?.message);
+          console.error('  - Error Type:', data.error?.type);
+          console.error('  - Error Code:', data.error?.code);
           Alert.alert('エラー', data.error?.message || `処理中にエラーが発生しました (${response.status})`);
         }
       }
     } catch (error) {
-      console.error('❌ Network Error:', error);
-      console.error('Error details:', {
-        name: error instanceof Error ? error.name : 'Unknown',
-        message: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : 'No stack trace'
-      });
+      // === 🔍 ネットワークエラー詳細解析 ===
+      console.error('\n❌ === ネットワークエラー詳細解析 ===');
+      console.error('  - エラータイプ:', error instanceof Error ? error.constructor.name : typeof error);
+      console.error('  - エラーメッセージ:', error instanceof Error ? error.message : String(error));
+      console.error('  - エラースタック:', error instanceof Error ? error.stack : 'No stack trace');
+      console.error('  - エラーオブジェクト全体:', error);
+      
       Alert.alert('エラー', 'ネットワークエラーが発生しました。インターネット接続を確認してください。');
     } finally {
       setIsLoading(false);
-      console.log('=== 言語生成処理完了 ===');
+      console.log('\n🏁 === 言語生成プロセス完了 ===\n');
     }
   };
 
@@ -206,7 +345,7 @@ export default function RephraseScreen() {
   };
 
   const onStyleSelect = (index: number) => {
-    console.log('スタイル選択:', activeStyles[index]?.name || 'undefined');
+    console.log('🎯 スタイル選択:', activeStyles[index]?.name || 'undefined');
     setSelectedStyleIndex(index);
     flatListRef.current?.scrollToIndex({ 
       index, 

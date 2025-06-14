@@ -10,10 +10,10 @@ export const SHARE_TEMPLATES: ShareTemplate[] = [
     platform: 'twitter',
     freeTemplate: `{text}
 
-#AI文章変換 #RephraseMaster #文章術 #言葉遊び
+#AI文章変換 #コトバクラフト #文章術 #言葉遊び
 
 AIで文章を様々なスタイルに変換↓
-https://rephrase-master.com`,
+https://kotoba-craft.com`,
     proTemplate: `{text}`
   },
   {
@@ -21,27 +21,27 @@ https://rephrase-master.com`,
     freeTemplate: `{text}
 
 AIで文章を様々なスタイルに変換できるよ！
-https://rephrase-master.com`,
+https://kotoba-craft.com`,
     proTemplate: `{text}`
   },
   {
     platform: 'instagram',
     freeTemplate: `{text}
 
-#AI文章変換 #RephraseMaster #文章術 #言葉遊び #クリエイティブ #文章力アップ
+#AI文章変換 #コトバクラフト #文章術 #言葉遊び #クリエイティブ #文章力アップ
 
 AIで文章を様々なスタイルに変換↓
-https://rephrase-master.com`,
+https://kotoba-craft.com`,
     proTemplate: `{text}`
   },
   {
     platform: 'tiktok',
     freeTemplate: `{text}
 
-#AI文章変換 #RephraseMaster #文章術 #言葉遊び #TikTok #バズる
+#AI文章変換 #コトバクラフト #文章術 #言葉遊び #TikTok #バズる
 
 AIで文章を様々なスタイルに変換↓
-https://rephrase-master.com`,
+https://kotoba-craft.com`,
     proTemplate: `{text}`
   },
   {
@@ -49,22 +49,22 @@ https://rephrase-master.com`,
     freeTemplate: `{text}
 
 AIで文章を様々なスタイルに変換！
-https://rephrase-master.com`,
+https://kotoba-craft.com`,
     proTemplate: `{text}`
   }
 ];
 
 // デフォルトのハッシュタグ設定
 export const DEFAULT_HASHTAGS = {
-  twitter: ['#AI文章変換', '#RephraseMaster', '#文章術', '#言葉遊び'],
-  instagram: ['#AI文章変換', '#RephraseMaster', '#文章術', '#言葉遊び', '#クリエイティブ', '#文章力アップ'],
-  tiktok: ['#AI文章変換', '#RephraseMaster', '#文章術', '#言葉遊び', '#TikTok', '#バズる'],
+  twitter: ['#AI文章変換', '#コトバクラフト', '#文章術', '#言葉遊び'],
+  instagram: ['#AI文章変換', '#コトバクラフト', '#文章術', '#言葉遊び', '#クリエイティブ', '#文章力アップ'],
+  tiktok: ['#AI文章変換', '#コトバクラフト', '#文章術', '#言葉遊び', '#TikTok', '#バズる'],
   line: [],
-  general: ['#AI文章変換', '#RephraseMaster']
+  general: ['#AI文章変換', '#コトバクラフト']
 };
 
 // デフォルトのリンク設定
-export const DEFAULT_LINK = 'https://rephrase-master.com';
+export const DEFAULT_LINK = 'https://kotoba-craft.com';
 
 // テンプレートを取得
 export const getShareTemplate = (
