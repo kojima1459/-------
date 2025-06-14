@@ -12,8 +12,9 @@ import {
   Linking,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Key, Globe, Palette, Info, Crown, X, Hash, Shield, FileText, Mail } from 'lucide-react-native';
+import { Key, Globe, Palette, Info, Crown, X, Hash, Shield, FileText, Mail, Home } from 'lucide-react-native';
 import { useSettings } from '@/hooks/SettingsContext';
+import { useRouter } from 'expo-router';
 
 export default function SettingsScreen() {
   const { 
@@ -32,6 +33,7 @@ export default function SettingsScreen() {
     saveHistoryEnabled,
     setSaveHistoryEnabled
   } = useSettings();
+  const router = useRouter();
   const [localApiKey, setLocalApiKey] = useState('');
 
   useEffect(() => {
@@ -45,6 +47,10 @@ export default function SettingsScreen() {
     } else {
       Alert.alert('エラー', 'APIキーを入力してください');
     }
+  };
+
+  const handleBackToHome = () => {
+    router.push('/(tabs)/');
   };
 
   const handleUpgradePress = () => {
@@ -95,8 +101,8 @@ export default function SettingsScreen() {
   };
 
   const handleContactPress = () => {
-    const email = 'support@rephrase-master.app';
-    const subject = 'お問い合わせ - Rephrase Master';
+    const email = 'support@kotoba-craft.app';
+    const subject = 'お問い合わせ - コトバクラフト';
     const body = 'お問い合わせ内容をこちらにご記入ください。';
     
     const mailtoUrl = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
@@ -151,8 +157,12 @@ export default function SettingsScreen() {
       style={styles.container}
     >
       <View style={styles.header}>
+        <TouchableOpacity style={styles.backButton} onPress={handleBackToHome}>
+          <Home size={20} color="#ffffff" />
+          <Text style={styles.backButtonText}>トップに戻る</Text>
+        </TouchableOpacity>
         <Text style={styles.title}>設定</Text>
-        <Text style={styles.subtitle}>アプリの設定をカスタマイズ</Text>
+        <Text style={styles.subtitle}>コトバクラフトの設定をカスタマイズ</Text>
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
@@ -298,7 +308,6 @@ export default function SettingsScreen() {
           </View>
         </SettingSection>
 
-        {/* Pro版専用設定 */}
         <SettingSection title="Pro版専用設定">
           <View style={styles.card}>
             <SettingRow
@@ -406,9 +415,20 @@ export default function SettingsScreen() {
         </SettingSection>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Rephrase Master v1.0.0</Text>
+          <Text style={styles.footerText}>コトバクラフト v1.0.0</Text>
           <Text style={styles.footerText}>Powered by OpenAI GPT-4</Text>
         </View>
+
+        {/* 最下部の「トップに戻る」ボタン */}
+        <TouchableOpacity style={styles.bottomBackButton} onPress={handleBackToHome}>
+          <LinearGradient
+            colors={['#8B5CF6', '#EC4899']}
+            style={styles.bottomBackButtonGradient}
+          >
+            <Home size={20} color="#ffffff" />
+            <Text style={styles.bottomBackButtonText}>🏠 トップに戻る</Text>
+          </LinearGradient>
+        </TouchableOpacity>
       </ScrollView>
     </LinearGradient>
   );
@@ -423,6 +443,23 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 32,
     paddingHorizontal: 20,
+  },
+  backButton: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 60 : 40,
+    left: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  backButtonText: {
+    fontSize: 14,
+    fontFamily: 'Inter-Medium',
+    color: '#ffffff',
   },
   title: {
     fontSize: 32,
@@ -708,5 +745,32 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     opacity: 0.7,
     marginBottom: 4,
+  },
+  bottomBackButton: {
+    marginHorizontal: 20,
+    marginBottom: 32,
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  bottomBackButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    gap: 8,
+  },
+  bottomBackButtonText: {
+    fontSize: 18,
+    fontFamily: 'Inter-SemiBold',
+    color: '#ffffff',
   },
 });

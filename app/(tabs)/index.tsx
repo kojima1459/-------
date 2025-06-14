@@ -20,30 +20,41 @@ import { ShareModal } from '@/components/ShareModal';
 import { REPHRASE_STYLES, getActiveStyles, getStyleById } from '@/config/styles';
 
 const { width: screenWidth } = Dimensions.get('window');
-const CARD_WIDTH = screenWidth * 0.7;
+const CARD_WIDTH = screenWidth * 0.8;
 const CARD_SPACING = 20;
 
 export default function RephraseScreen() {
   const { apiKey, isPro, rephraseCount, setRephraseCount } = useSettings();
   const router = useRouter();
   const [inputText, setInputText] = useState('');
-  const [selectedStyle, setSelectedStyle] = useState(getActiveStyles()[0]);
+  const [selectedStyleIndex, setSelectedStyleIndex] = useState(0);
   const [rephraseResult, setRephraseResult] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const flatListRef = useRef<FlatList>(null);
 
   const activeStyles = getActiveStyles();
+  const selectedStyle = activeStyles[selectedStyleIndex];
+
+  // デバッグ用コンソールログ
+  console.log('=== コトバクラフト デバッグ情報 ===');
+  console.log('API Key 設定状況:', apiKey ? 'あり' : 'なし');
+  console.log('選択中のスタイル:', selectedStyle);
+  console.log('アクティブスタイル数:', activeStyles.length);
 
   const handleRephrase = async () => {
+    console.log('=== 言語生成開始 ===');
+    
     // APIキーの確認
     if (!apiKey || apiKey.trim() === '') {
+      console.error('APIキーが未設定');
       Alert.alert('APIキー未設定', 'Settings画面でOpenAI APIキーを設定してください。');
       return;
     }
 
     // 無料ユーザーの制限チェック
     if (!isPro && rephraseCount >= 5) {
+      console.log('無料版の制限に達しました');
       Alert.alert(
         '制限に達しました',
         '5回までの無料利用が完了しました。有料版にアップグレードして続けて利用できます。',
@@ -59,9 +70,20 @@ export default function RephraseScreen() {
     }
 
     if (!inputText.trim()) {
+      console.error('入力文章が空');
       Alert.alert('エラー', '文章を入力してください');
       return;
     }
+
+    if (!selectedStyle) {
+      console.error('スタイルが選択されていません');
+      Alert.alert('エラー', 'スタイルを選択してください');
+      return;
+    }
+
+    console.log('入力文章:', inputText);
+    console.log('選択スタイル:', selectedStyle.name);
+    console.log('使用プロンプト:', selectedStyle.prompt);
 
     setIsLoading(true);
     try {
@@ -75,27 +97,39 @@ export default function RephraseScreen() {
           model: 'gpt-4o',
           messages: [
             {
+              role: 'system',
+              content: 'あなたは文章を様々なスタイルで言い換える専門家です。指定されたスタイルに従って、自然で魅力的な日本語の文章に言い換えてください。元の意味を保ちながら、指定されたスタイルの特徴を明確に表現してください。'
+            },
+            {
               role: 'user',
               content: `${selectedStyle.prompt}\n\n文章: ${inputText}`,
             },
           ],
           max_tokens: 500,
+          temperature: 0.7,
         }),
       });
 
+      console.log('API Response Status:', response.status);
       const data = await response.json();
+      console.log('API Response Data:', data);
 
       if (response.ok) {
-        setRephraseResult(data.choices[0].message.content.trim());
+        const result = data.choices[0].message.content.trim();
+        console.log('生成結果:', result);
+        setRephraseResult(result);
         setRephraseCount(rephraseCount + 1);
+        console.log('=== 言語生成成功 ===');
       } else {
+        console.error('API Error:', data);
         if (response.status === 401) {
           Alert.alert('APIキーエラー', 'APIキーが無効です。Settings画面で正しいAPIキーを設定してください。');
         } else {
           Alert.alert('エラー', data.error?.message || '処理中にエラーが発生しました');
         }
       }
-    } catch (e) {
+    } catch (error) {
+      console.error('Network Error:', error);
       Alert.alert('エラー', 'ネットワークエラーが発生しました');
     } finally {
       setIsLoading(false);
@@ -110,8 +144,9 @@ export default function RephraseScreen() {
     router.push('/settings');
   };
 
-  const onStyleSelect = (style: any, index: number) => {
-    setSelectedStyle(style);
+  const onStyleSelect = (index: number) => {
+    console.log('スタイル選択:', activeStyles[index].name);
+    setSelectedStyleIndex(index);
     flatListRef.current?.scrollToIndex({ 
       index, 
       animated: true,
@@ -120,7 +155,7 @@ export default function RephraseScreen() {
   };
 
   const renderStyleCard = ({ item, index }: { item: any; index: number }) => {
-    const isSelected = selectedStyle.id === item.id;
+    const isSelected = selectedStyleIndex === index;
     
     return (
       <TouchableOpacity
@@ -129,7 +164,7 @@ export default function RephraseScreen() {
           isSelected && styles.selectedStyleCard,
           { backgroundColor: isSelected ? item.color : '#ffffff' }
         ]}
-        onPress={() => onStyleSelect(item, index)}
+        onPress={() => onStyleSelect(index)}
       >
         <View style={styles.styleCardContent}>
           <Text style={styles.styleEmoji}>{item.emoji}</Text>
@@ -177,8 +212,8 @@ export default function RephraseScreen() {
     <LinearGradient colors={['#8B5CF6', '#EC4899', '#F59E0B']} style={styles.container}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <Text style={styles.title}>Rephrase Master</Text>
-          <Text style={styles.subtitle}>AIが文章を様々なスタイルで言い換えます</Text>
+          <Text style={styles.title}>コトバクラフト</Text>
+          <Text style={styles.subtitle}>AIが文章を様々なスタイルで変換します</Text>
           
           {/* プラン表示 */}
           <View style={styles.planIndicator}>
@@ -236,28 +271,56 @@ export default function RephraseScreen() {
             />
           </View>
 
-          {/* スタイル選択カルーセル */}
+          {/* 横スワイプ リールUI スタイル選択 */}
           <View style={styles.styleSection}>
             <Text style={styles.sectionTitle}>スタイルを選択</Text>
             <Text style={styles.styleSectionSubtitle}>
-              8つのスタイルから選んで、文章を変換しよう！
+              スワイプで文化的スタイルを探索しよう！
             </Text>
-            <FlatList
-              ref={flatListRef}
-              data={activeStyles}
-              renderItem={renderStyleCard}
-              keyExtractor={(item) => item.id}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              snapToInterval={CARD_WIDTH + CARD_SPACING}
-              decelerationRate="fast"
-              contentContainerStyle={styles.styleCarousel}
-              getItemLayout={(data, index) => ({
-                length: CARD_WIDTH + CARD_SPACING,
-                offset: (CARD_WIDTH + CARD_SPACING) * index,
-                index,
-              })}
-            />
+            
+            {/* リール風の横スワイプUI */}
+            <View style={styles.reelContainer}>
+              <FlatList
+                ref={flatListRef}
+                data={activeStyles}
+                renderItem={renderStyleCard}
+                keyExtractor={(item) => item.id}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                snapToInterval={CARD_WIDTH + CARD_SPACING}
+                decelerationRate="fast"
+                contentContainerStyle={styles.styleCarousel}
+                onMomentumScrollEnd={(event) => {
+                  const index = Math.round(event.nativeEvent.contentOffset.x / (CARD_WIDTH + CARD_SPACING));
+                  if (index !== selectedStyleIndex) {
+                    setSelectedStyleIndex(index);
+                  }
+                }}
+                getItemLayout={(data, index) => ({
+                  length: CARD_WIDTH + CARD_SPACING,
+                  offset: (CARD_WIDTH + CARD_SPACING) * index,
+                  index,
+                })}
+              />
+              
+              {/* スワイプヒント */}
+              <View style={styles.swipeHint}>
+                <Text style={styles.swipeHintText}>← スワイプで探索 →</Text>
+              </View>
+              
+              {/* スタイルインジケーター */}
+              <View style={styles.styleIndicator}>
+                {activeStyles.map((_, index) => (
+                  <View
+                    key={index}
+                    style={[
+                      styles.indicatorDot,
+                      { backgroundColor: index === selectedStyleIndex ? '#8B5CF6' : '#e5e7eb' }
+                    ]}
+                  />
+                ))}
+              </View>
+            </View>
           </View>
 
           {/* 言い換えボタン */}
@@ -272,7 +335,7 @@ export default function RephraseScreen() {
                 : <Send size={20} color="#fff" />
               }
               <Text style={styles.rephraseButtonText}>
-                {isLoading ? '変換中...' : '言い換える'}
+                {isLoading ? '変換中...' : '✨ 変換する'}
               </Text>
               {!isPro && (
                 <Text style={styles.countText}>
@@ -308,7 +371,7 @@ export default function RephraseScreen() {
         visible={showShareModal}
         onClose={() => setShowShareModal(false)}
         rephraseText={rephraseResult}
-        style={selectedStyle.id}
+        style={selectedStyle?.id || 'meigen'}
         onUpgradePress={() => {
           setShowShareModal(false);
           navigateToSettings();
@@ -332,11 +395,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20 
   },
   title: { 
-    fontSize: 32, 
+    fontSize: 36, 
     fontFamily: 'Inter-Bold', 
     color: '#fff', 
     textAlign: 'center', 
-    marginBottom: 8 
+    marginBottom: 8,
+    letterSpacing: 1,
   },
   subtitle: { 
     fontSize: 16, 
@@ -455,6 +519,10 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
     color: '#6b7280',
     marginBottom: 16,
+    textAlign: 'center',
+  },
+  reelContainer: {
+    position: 'relative',
   },
   styleCarousel: {
     paddingHorizontal: 10,
@@ -462,33 +530,36 @@ const styles = StyleSheet.create({
   styleCard: {
     width: CARD_WIDTH,
     marginHorizontal: CARD_SPACING / 2,
-    borderRadius: 16,
-    padding: 20,
+    borderRadius: 20,
+    padding: 24,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  selectedStyleCard: {
-    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
     shadowRadius: 12,
     elevation: 8,
+    borderWidth: 2,
+    borderColor: '#e5e7eb',
+    minHeight: 200,
+  },
+  selectedStyleCard: {
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 12,
     borderColor: 'transparent',
+    transform: [{ scale: 1.02 }],
   },
   styleCardContent: {
     alignItems: 'center',
     justifyContent: 'center',
+    flex: 1,
     position: 'relative',
   },
   styleEmoji: {
-    fontSize: 32,
-    marginBottom: 12,
+    fontSize: 40,
+    marginBottom: 16,
   },
   styleCardTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontFamily: 'Inter-Bold',
     marginBottom: 8,
     textAlign: 'center',
@@ -523,6 +594,28 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontFamily: 'Inter-Bold',
     color: '#ffffff',
+  },
+  swipeHint: {
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  swipeHintText: {
+    fontSize: 12,
+    fontFamily: 'Inter-Regular',
+    color: '#9ca3af',
+    fontStyle: 'italic',
+  },
+  styleIndicator: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 16,
+    gap: 8,
+  },
+  indicatorDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   rephraseButton: { 
     marginBottom: 24, 

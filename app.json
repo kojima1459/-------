@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Rephrase Master",
-    "slug": "rephrase-master",
+    "name": "コトバクラフト",
+    "slug": "kotoba-craft",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "rephrase-master",
+    "scheme": "kotoba-craft",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {

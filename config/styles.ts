@@ -84,6 +84,18 @@ export const REPHRASE_STYLES: RephraseStyle[] = [
     color: '#1F2937',
     prompt: '以下の文章を、丁寧で上品な敬語表現に言い換えてください。ビジネスシーンで使えるような丁寧語を使用してください。',
     category: 'business'
+  },
+  // 将来追加予定のスタイル（準備）
+  {
+    id: 'iminsin-sukebe',
+    name: '意味深スケベ風',
+    description: '普通の言葉なのに、なぜかちょっと意味深に聞こえる…',
+    emoji: '😏',
+    color: '#FF6B9D',
+    prompt: '以下の文章を、直接的ではないが意味深で少しスケベな響きを持つ表現に言い換えてください。品を保ちながらも、読み手がドキッとするような言葉遣いを使用してください。',
+    category: 'fun',
+    isLimited: true,
+    limitEndDate: new Date('2024-12-31'), // 例：年末まで限定
   }
 ];
 
