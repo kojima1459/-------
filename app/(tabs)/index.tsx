@@ -15,7 +15,7 @@ import {
   Animated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Send, Sparkles, Crown, Share2, Lock, AlertCircle } from 'lucide-react-native';
+import { Send, Sparkles, Crown, Share2, Lock, CircleAlert as AlertCircle } from 'lucide-react-native';
 import { useSettings } from '@/hooks/SettingsContext';
 import { useRouter } from 'expo-router';
 import { ShareModal } from '@/components/ShareModal';
