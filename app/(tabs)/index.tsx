@@ -15,15 +15,19 @@ import {
   Animated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Send, Sparkles, Crown, Share2, Lock } from 'lucide-react-native';
+import { Send, Sparkles, Crown, Share2, Lock, AlertCircle } from 'lucide-react-native';
 import { useSettings } from '@/hooks/SettingsContext';
 import { useRouter } from 'expo-router';
 import { ShareModal } from '@/components/ShareModal';
 import { getActiveStyles, getStyleById } from '@/config/styles';
 
 const { width: screenWidth } = Dimensions.get('window');
-const CARD_WIDTH = screenWidth * 0.45; // 3つ見えるように45%に調整
+const CARD_WIDTH = screenWidth * 0.4; // カードサイズ調整：3つ見えるように
 const CARD_SPACING = 12;
+
+// 文字数制限定数
+const MAX_INPUT_LENGTH = 300;
+const MAX_OUTPUT_LENGTH = 400;
 
 export default function RephraseScreen() {
   const { apiKey, isPro, rephraseCount, setRephraseCount } = useSettings();
@@ -40,40 +44,25 @@ export default function RephraseScreen() {
   const activeStyles = getActiveStyles(isPro);
   const selectedStyle = activeStyles[selectedStyleIndex];
 
-  // === 🔍 STEP 1: 基本情報デバッグ ===
+  // 文字数カウント関数
+  const getInputCharCount = () => inputText.length;
+  const isInputOverLimit = () => getInputCharCount() > MAX_INPUT_LENGTH;
+
   console.log('\n=== コトバクラフト デバッグ情報 ===');
   console.log('🔑 API Key 設定状況:', apiKey ? `設定済み (${apiKey.substring(0, 10)}...)` : '❌ 未設定');
   console.log('📊 全スタイル総数:', activeStyles.length);
-  console.log('📊 アクティブスタイル配列:', activeStyles);
   console.log('📊 選択中インデックス:', selectedStyleIndex);
-  console.log('📊 選択中スタイル Raw:', selectedStyle);
-  
-  // === 🔍 STEP 2: 選択スタイルの詳細検証 ===
-  if (selectedStyle) {
-    console.log('✅ 選択スタイル詳細:');
-    console.log('  - ID:', selectedStyle.id);
-    console.log('  - 名前:', selectedStyle.name);
-    console.log('  - 説明:', selectedStyle.description);
-    console.log('  - プロンプト存在:', !!selectedStyle.prompt);
-    console.log('  - プロンプト長:', selectedStyle.prompt ? selectedStyle.prompt.length : 0);
-    console.log('  - プロンプト内容:', selectedStyle.prompt || '❌ EMPTY');
-  } else {
-    console.error('❌ selectedStyle が undefined です！');
-    console.error('  - selectedStyleIndex:', selectedStyleIndex);
-    console.error('  - activeStyles.length:', activeStyles.length);
-    console.error('  - activeStyles[0]:', activeStyles[0]);
-  }
+  console.log('📊 選択中スタイル:', selectedStyle?.name || 'undefined');
+  console.log('📊 文字数制限:', `入力: ${getInputCharCount()}/${MAX_INPUT_LENGTH}文字`);
 
   const handleRephrase = async () => {
     console.log('\n🚀 === 言語生成プロセス開始 ===');
     
-    // === 🔍 STEP 3: 入力検証（詳細） ===
-    console.log('📋 Step 1: 入力データ検証');
-    console.log('  - APIキー:', apiKey ? `✅ 設定済み (${apiKey.length}文字)` : '❌ 未設定');
-    console.log('  - Pro状態:', isPro ? '✅ Pro版' : '📱 無料版');
-    console.log('  - 利用回数:', `${rephraseCount}/5`);
-    console.log('  - 入力文章:', inputText ? `✅ "${inputText}"` : '❌ 空');
-    console.log('  - 選択スタイル:', selectedStyle ? `✅ ${selectedStyle.name}` : '❌ 未選択');
+    // 文字数制限チェック
+    if (isInputOverLimit()) {
+      Alert.alert('文字数制限', `入力文章は${MAX_INPUT_LENGTH}文字以内にしてください。現在: ${getInputCharCount()}文字`);
+      return;
+    }
 
     // APIキーチェック
     if (!apiKey || apiKey.trim() === '') {
@@ -103,49 +92,24 @@ export default function RephraseScreen() {
       return;
     }
 
-    // === 🔍 STEP 4: スタイル選択の詳細検証 ===
-    console.log('\n📋 Step 2: スタイル選択詳細検証');
-    
+    // スタイル検証
     if (!selectedStyle) {
       console.error('❌ 致命的エラー: selectedStyle が null/undefined');
-      console.error('  デバッグ情報:');
-      console.error('  - selectedStyleIndex:', selectedStyleIndex);
-      console.error('  - activeStyles:', activeStyles);
-      console.error('  - activeStyles.length:', activeStyles.length);
       Alert.alert('エラー', 'スタイル選択にエラーがあります。アプリを再起動してください。');
       return;
     }
 
-    console.log('✅ スタイル選択検証完了:');
-    console.log('  - スタイルID:', selectedStyle.id);
-    console.log('  - スタイル名:', selectedStyle.name);
-
-    // === 🔍 STEP 5: プロンプト詳細検証 ===
-    console.log('\n📋 Step 3: プロンプト詳細検証');
-    
     if (!selectedStyle.prompt) {
       console.error('❌ 致命的エラー: selectedStyle.prompt が存在しません');
-      console.error('  - selectedStyle:', selectedStyle);
-      console.error('  - prompt プロパティ:', selectedStyle.prompt);
       Alert.alert('エラー', 'スタイル設定にプロンプトが設定されていません。');
       return;
     }
 
-    if (selectedStyle.prompt.trim() === '') {
-      console.error('❌ 致命的エラー: selectedStyle.prompt が空文字');
-      console.error('  - prompt 内容:', `"${selectedStyle.prompt}"`);
-      Alert.alert('エラー', 'スタイルのプロンプトが空です。');
-      return;
-    }
+    console.log('✅ スタイル:', selectedStyle.name);
+    console.log('✅ プロンプト長:', selectedStyle.prompt.length);
 
-    console.log('✅ プロンプト検証完了:');
-    console.log('  - プロンプト長:', selectedStyle.prompt.length);
-    console.log('  - プロンプト内容:', selectedStyle.prompt);
-
-    // === 🔍 STEP 6: メッセージ構築詳細検証 ===
-    console.log('\n📋 Step 4: APIメッセージ構築');
-    
-    const systemMessage = 'あなたは文章を様々なスタイルで言い換える専門家です。指定されたスタイルに従って、自然で魅力的な日本語の文章に言い換えてください。元の意味を保ちながら、指定されたスタイルの特徴を明確に表現してください。';
+    // メッセージ構築
+    const systemMessage = 'あなたは文章を様々なスタイルで言い換える専門家です。指定されたスタイルに従って、自然で魅力的な日本語の文章に言い換えてください。元の意味を保ちながら、指定されたスタイルの特徴を明確に表現してください。出力は400文字以内にまとめてください。';
     const userMessage = `${selectedStyle.prompt}\n\n文章: ${inputText}`;
     
     const messages = [
@@ -162,48 +126,17 @@ export default function RephraseScreen() {
     const requestPayload = {
       model: 'gpt-4o',
       messages: messages,
-      max_tokens: 500,
+      max_tokens: Math.min(500, MAX_OUTPUT_LENGTH * 2), // 余裕を持って設定
       temperature: 0.7,
     };
 
-    console.log('✅ メッセージ構築完了:');
-    console.log('  - システムメッセージ長:', systemMessage.length);
-    console.log('  - ユーザーメッセージ長:', userMessage.length);
-    console.log('  - システムメッセージ:', systemMessage);
-    console.log('  - ユーザーメッセージ:', userMessage);
-    
-    // === 🔍 ⭐️ ここが一番重要：messages配列の詳細確認 ⭐️ ===
-    console.log('\n🔍 === MESSAGES配列詳細確認 ===');
-    console.log('  - messages配列型:', Array.isArray(messages) ? 'Array' : typeof messages);
-    console.log('  - messages配列長:', messages.length);
-    console.log('  - messages[0] 存在:', !!messages[0]);
-    console.log('  - messages[0] 詳細:', messages[0]);
-    console.log('  - messages[0].role:', messages[0]?.role);
-    console.log('  - messages[0].content 存在:', !!messages[0]?.content);
-    console.log('  - messages[0].content 長:', messages[0]?.content?.length || 0);
-    console.log('  - messages[0].content 内容:', messages[0]?.content);
-    console.log('  - messages[1] 存在:', !!messages[1]);
-    console.log('  - messages[1] 詳細:', messages[1]);
-    console.log('  - messages[1].role:', messages[1]?.role);
-    console.log('  - messages[1].content 存在:', !!messages[1]?.content);
-    console.log('  - messages[1].content 長:', messages[1]?.content?.length || 0);
-    console.log('  - messages[1].content 内容:', messages[1]?.content);
-    
-    // === 🔍 完全なペイロード確認 ===
-    console.log('\n🔍 === 完全なペイロード確認 ===');
-    console.log('  - requestPayload型:', typeof requestPayload);
-    console.log('  - requestPayload.model:', requestPayload.model);
-    console.log('  - requestPayload.messages 存在:', !!requestPayload.messages);
-    console.log('  - requestPayload.messages 型:', Array.isArray(requestPayload.messages) ? 'Array' : typeof requestPayload.messages);
-    console.log('  - requestPayload.messages 長:', requestPayload.messages.length);
-    console.log('  - requestPayload.max_tokens:', requestPayload.max_tokens);
-    console.log('  - requestPayload.temperature:', requestPayload.temperature);
-    console.log('  - 完全なペイロード JSON:');
-    console.log(JSON.stringify(requestPayload, null, 2));
+    console.log('🔍 完全なペイロード確認:');
+    console.log('  - Model:', requestPayload.model);
+    console.log('  - Max tokens:', requestPayload.max_tokens);
+    console.log('  - Messages count:', requestPayload.messages.length);
+    console.log('  - System message:', messages[0].content);
+    console.log('  - User message:', messages[1].content);
 
-    // === 🔍 STEP 7: API呼び出し実行 ===
-    console.log('\n📋 Step 5: API呼び出し実行');
-    
     setIsLoading(true);
 
     // ボタンアニメーション開始
@@ -221,7 +154,7 @@ export default function RephraseScreen() {
     ]).start();
 
     // パルスアニメーション開始
-    Animated.loop(
+    const pulseAnimation = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
           toValue: 1.05,
@@ -234,13 +167,11 @@ export default function RephraseScreen() {
           useNativeDriver: true,
         }),
       ])
-    ).start();
+    );
+    pulseAnimation.start();
     
     try {
       console.log('🌐 API Request 送信中...');
-      console.log('  - URL: https://api.openai.com/v1/chat/completions');
-      console.log('  - Method: POST');
-      console.log('  - Headers: Content-Type: application/json, Authorization: Bearer [HIDDEN]');
       
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -251,67 +182,41 @@ export default function RephraseScreen() {
         body: JSON.stringify(requestPayload),
       });
 
-      console.log('📥 API Response 受信:');
-      console.log('  - Status:', response.status);
-      console.log('  - StatusText:', response.statusText);
-      console.log('  - Headers:', Object.fromEntries(response.headers.entries()));
+      console.log('📥 API Response Status:', response.status);
 
       const data = await response.json();
-      console.log('📥 API Response Data:');
-      console.log(JSON.stringify(data, null, 2));
+      console.log('📥 API Response Data:', JSON.stringify(data, null, 2));
 
       if (response.ok) {
-        // === 🔍 STEP 8: レスポンス構造詳細検証 ===
-        console.log('\n📋 Step 6: レスポンス構造検証');
-        
-        console.log('  - data.choices 存在:', !!data.choices);
-        console.log('  - data.choices 型:', Array.isArray(data.choices) ? 'Array' : typeof data.choices);
-        console.log('  - data.choices 長:', data.choices ? data.choices.length : 0);
-        
         if (!data.choices || !Array.isArray(data.choices) || data.choices.length === 0) {
           console.error('❌ API Response エラー: choices が存在しないか空です');
-          console.error('  - data.choices:', data.choices);
           Alert.alert('エラー', 'AIからの応答形式が不正です（choices不正）');
           return;
         }
         
-        console.log('  - data.choices[0] 存在:', !!data.choices[0]);
-        console.log('  - data.choices[0] 型:', typeof data.choices[0]);
-        console.log('  - data.choices[0]:', data.choices[0]);
-        
-        if (!data.choices[0]) {
-          console.error('❌ API Response エラー: choices[0] が存在しません');
-          Alert.alert('エラー', 'AIからの応答形式が不正です（choices[0]不正）');
-          return;
-        }
-        
-        console.log('  - data.choices[0].message 存在:', !!data.choices[0].message);
-        console.log('  - data.choices[0].message 型:', typeof data.choices[0].message);
-        console.log('  - data.choices[0].message:', data.choices[0].message);
-        
-        if (!data.choices[0].message) {
+        if (!data.choices[0] || !data.choices[0].message) {
           console.error('❌ API Response エラー: message が存在しません');
           Alert.alert('エラー', 'AIからの応答形式が不正です（message不正）');
           return;
         }
         
         const messageContent = data.choices[0].message.content;
-        console.log('  - message.content 存在:', !!messageContent);
-        console.log('  - message.content 型:', typeof messageContent);
-        console.log('  - message.content 長:', messageContent ? messageContent.length : 0);
-        console.log('  - message.content 内容:', messageContent);
-        
         if (!messageContent) {
           console.error('❌ API Response エラー: message.content が存在しません');
-          console.error('  - content value:', messageContent);
           Alert.alert('エラー', 'AIからの応答内容が空です');
           return;
         }
 
-        const result = messageContent.trim();
+        let result = messageContent.trim();
+        
+        // 文字数制限チェック（出力）
+        if (result.length > MAX_OUTPUT_LENGTH) {
+          result = result.substring(0, MAX_OUTPUT_LENGTH) + '...';
+          console.log(`⚠️ 出力文字数制限により切り詰め: ${result.length}文字`);
+        }
+
         if (!result) {
           console.error('❌ API Response エラー: trimmed content が空です');
-          console.error('  - trimmed content:', `"${result}"`);
           Alert.alert('エラー', 'AIからの応答内容が空です（trim後）');
           return;
         }
@@ -327,45 +232,29 @@ export default function RephraseScreen() {
         console.log('  - 新しい利用回数:', rephraseCount + 1);
         
       } else {
-        // === 🔍 エラーレスポンス詳細解析 ===
         console.error('\n❌ === API エラーレスポンス詳細解析 ===');
         console.error('  - Status:', response.status);
-        console.error('  - StatusText:', response.statusText);
         console.error('  - Error Data:', data);
         
         if (response.status === 401) {
-          console.error('❌ 認証エラー: APIキーが無効');
-          console.error('  - 使用中のAPIキー長:', apiKey.length);
-          console.error('  - APIキー開始:', apiKey.substring(0, 10));
           Alert.alert('APIキーエラー', 'APIキーが無効です。Settings画面で正しいAPIキーを設定してください。');
         } else if (response.status === 429) {
-          console.error('❌ レート制限エラー');
           Alert.alert('エラー', 'APIの利用制限に達しました。しばらく時間をおいてから再試行してください。');
         } else if (response.status === 500) {
-          console.error('❌ サーバーエラー');
           Alert.alert('エラー', 'OpenAIサーバーでエラーが発生しました。しばらく時間をおいてから再試行してください。');
         } else {
-          console.error('❌ その他のAPIエラー');
-          console.error('  - Error Message:', data.error?.message);
-          console.error('  - Error Type:', data.error?.type);
-          console.error('  - Error Code:', data.error?.code);
           Alert.alert('エラー', data.error?.message || `処理中にエラーが発生しました (${response.status})`);
         }
       }
     } catch (error) {
-      // === 🔍 ネットワークエラー詳細解析 ===
       console.error('\n❌ === ネットワークエラー詳細解析 ===');
-      console.error('  - エラータイプ:', error instanceof Error ? error.constructor.name : typeof error);
-      console.error('  - エラーメッセージ:', error instanceof Error ? error.message : String(error));
-      console.error('  - エラースタック:', error instanceof Error ? error.stack : 'No stack trace');
-      console.error('  - エラーオブジェクト全体:', error);
-      
+      console.error('  - エラー:', error);
       Alert.alert('エラー', 'ネットワークエラーが発生しました。インターネット接続を確認してください。');
     } finally {
       setIsLoading(false);
       
       // アニメーション停止
-      pulseAnim.stopAnimation();
+      pulseAnimation.stop();
       Animated.timing(pulseAnim, {
         toValue: 1,
         duration: 200,
@@ -447,7 +336,7 @@ export default function RephraseScreen() {
           <View style={styles.styleCardContent}>
             {isProStyle && (
               <View style={styles.proLockOverlay}>
-                <Crown size={20} color="#F59E0B" />
+                <Crown size={16} color="#F59E0B" />
               </View>
             )}
             <Text style={styles.styleEmoji}>{item.emoji}</Text>
@@ -475,6 +364,10 @@ export default function RephraseScreen() {
                   {item.category === 'popular' ? '人気' : 
                    item.category === 'creative' ? 'クリエイティブ' :
                    item.category === 'business' ? 'ビジネス' : 
+                   item.category === 'political' ? '政治' :
+                   item.category === 'literary' ? '文学' :
+                   item.category === 'social' ? 'SNS' :
+                   item.category === 'tech' ? '技術' :
                    item.category === 'pro' ? 'Pro版' : '楽しい'}
                 </Text>
               </View>
@@ -504,7 +397,7 @@ export default function RephraseScreen() {
         {/* ヘッダー */}
         <View style={styles.header}>
           <Text style={styles.title}>コトバクラフト</Text>
-          <Text style={styles.subtitle}>AIが文章を様々なスタイルで変換します</Text>
+          <Text style={styles.subtitle}>16種の文化記号で言語遊び体験</Text>
           
           {/* プラン表示 */}
           <View style={styles.planIndicator}>
@@ -553,16 +446,38 @@ export default function RephraseScreen() {
             <View style={styles.mainCard}>
               {/* 文章入力 */}
               <View style={styles.inputSection}>
-                <Text style={styles.sectionTitle}>文章を入力</Text>
+                <View style={styles.inputHeader}>
+                  <Text style={styles.sectionTitle}>文章を入力</Text>
+                  <View style={styles.charCountContainer}>
+                    <Text style={[
+                      styles.charCount,
+                      isInputOverLimit() && styles.charCountOver
+                    ]}>
+                      {getInputCharCount()}/{MAX_INPUT_LENGTH}
+                    </Text>
+                    {isInputOverLimit() && (
+                      <AlertCircle size={16} color="#ef4444" />
+                    )}
+                  </View>
+                </View>
                 <TextInput
-                  style={styles.textInput}
+                  style={[
+                    styles.textInput,
+                    isInputOverLimit() && styles.textInputOver
+                  ]}
                   placeholder="例: 今日はいい天気ですね"
                   value={inputText}
                   onChangeText={setInputText}
                   multiline
                   numberOfLines={4}
                   placeholderTextColor="#9ca3af"
+                  maxLength={MAX_INPUT_LENGTH + 50} // ソフト制限
                 />
+                {isInputOverLimit() && (
+                  <Text style={styles.charLimitWarning}>
+                    文字数制限を超えています。{MAX_INPUT_LENGTH}文字以内にしてください。
+                  </Text>
+                )}
               </View>
 
               {/* 選択中スタイルの説明表示 */}
@@ -581,11 +496,11 @@ export default function RephraseScreen() {
                 </View>
               )}
 
-              {/* 横スワイプ リールUI スタイル選択 */}
+              {/* 16種スタイル選択リール */}
               <View style={styles.styleSection}>
-                <Text style={styles.sectionTitle}>スタイルを選択</Text>
+                <Text style={styles.sectionTitle}>16種の文化記号スタイル</Text>
                 <Text style={styles.styleSectionSubtitle}>
-                  スワイプで文化的スタイルを探索しよう！
+                  スワイプで言語の多様性を探索しよう！
                 </Text>
                 
                 {/* リール風の横スワイプUI */}
@@ -615,7 +530,7 @@ export default function RephraseScreen() {
                   
                   {/* スワイプヒント */}
                   <View style={styles.swipeHint}>
-                    <Text style={styles.swipeHintText}>← スワイプで探索 →</Text>
+                    <Text style={styles.swipeHintText}>← 16種類をスワイプで探索 →</Text>
                   </View>
                   
                   {/* スタイルインジケーター */}
@@ -628,7 +543,7 @@ export default function RephraseScreen() {
                           { backgroundColor: index === selectedStyleIndex ? '#8B5CF6' : '#e5e7eb' }
                         ]}
                       />
-                    )).slice(0, 10)} {/* 最初の10個だけ表示 */}
+                    )).slice(0, 16)} {/* 最初の16個表示 */}
                   </View>
                 </View>
               </View>
@@ -645,6 +560,11 @@ export default function RephraseScreen() {
                   </View>
                   <View style={styles.resultContainer}>
                     <Text style={styles.resultText}>{rephraseResult}</Text>
+                    <View style={styles.resultStats}>
+                      <Text style={styles.resultStatsText}>
+                        出力: {rephraseResult.length}/{MAX_OUTPUT_LENGTH}文字
+                      </Text>
+                    </View>
                     <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
                       <Share2 size={16} color="#EC4899" />
                       <Text style={styles.shareButtonText}>SNSでシェア</Text>
@@ -659,9 +579,12 @@ export default function RephraseScreen() {
           <View style={styles.fixedButtonContainer}>
             <Animated.View style={{ transform: [{ scale: isLoading ? pulseAnim : 1 }] }}>
               <TouchableOpacity
-                style={[styles.rephraseButton, isLoading && styles.disabledButton]}
+                style={[
+                  styles.rephraseButton, 
+                  (isLoading || isInputOverLimit()) && styles.disabledButton
+                ]}
                 onPress={handleRephrase}
-                disabled={isLoading}
+                disabled={isLoading || isInputOverLimit()}
                 activeOpacity={0.8}
               >
                 <LinearGradient colors={['#8B5CF6', '#EC4899']} style={styles.buttonGradient}>
@@ -670,7 +593,7 @@ export default function RephraseScreen() {
                     : <Send size={20} color="#fff" />
                   }
                   <Text style={styles.rephraseButtonText}>
-                    {isLoading ? '変換中...' : '✨ 変換する'}
+                    {isLoading ? '変換中...' : '✨ 文化記号変換'}
                   </Text>
                   {!isPro && (
                     <Text style={styles.countText}>
@@ -687,7 +610,7 @@ export default function RephraseScreen() {
           visible={showShareModal}
           onClose={() => setShowShareModal(false)}
           rephraseText={rephraseResult}
-          style={selectedStyle?.id || 'meigen'}
+          style={selectedStyle?.id || 'meigen-empty'}
           onUpgradePress={() => {
             setShowShareModal(false);
             navigateToSettings();
@@ -814,11 +737,29 @@ const styles = StyleSheet.create({
   inputSection: {
     marginBottom: 24,
   },
+  inputHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
   sectionTitle: { 
     fontSize: 18, 
     fontFamily: 'Inter-SemiBold', 
-    color: '#1f2937', 
-    marginBottom: 16 
+    color: '#1f2937'
+  },
+  charCountContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  charCount: {
+    fontSize: 14,
+    fontFamily: 'Inter-Medium',
+    color: '#6b7280',
+  },
+  charCountOver: {
+    color: '#ef4444',
   },
   textInput: { 
     borderWidth: 1, 
@@ -831,6 +772,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9fafb', 
     minHeight: 100, 
     textAlignVertical: 'top' 
+  },
+  textInputOver: {
+    borderColor: '#ef4444',
+    backgroundColor: '#fef2f2',
+  },
+  charLimitWarning: {
+    fontSize: 12,
+    fontFamily: 'Inter-Medium',
+    color: '#ef4444',
+    marginTop: 8,
   },
   selectedStyleInfo: {
     backgroundColor: '#f0f9ff',
@@ -882,7 +833,7 @@ const styles = StyleSheet.create({
     width: CARD_WIDTH,
     marginHorizontal: CARD_SPACING / 2,
     borderRadius: 16,
-    padding: 16,
+    padding: 14,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
@@ -890,7 +841,7 @@ const styles = StyleSheet.create({
     elevation: 5,
     borderWidth: 2,
     borderColor: '#e5e7eb',
-    minHeight: 160,
+    minHeight: 140,
   },
   selectedStyleCard: {
     shadowOpacity: 0.25,
@@ -922,30 +873,30 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   styleEmoji: {
-    fontSize: 32,
-    marginBottom: 8,
+    fontSize: 28,
+    marginBottom: 6,
   },
   styleCardTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: 'Inter-Bold',
     marginBottom: 4,
     textAlign: 'center',
   },
   styleCardDescription: {
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: 'Inter-Regular',
     textAlign: 'center',
-    lineHeight: 16,
-    marginBottom: 8,
+    lineHeight: 14,
+    marginBottom: 6,
   },
   categoryBadge: {
     paddingHorizontal: 6,
-    paddingVertical: 3,
+    paddingVertical: 2,
     borderRadius: 6,
     marginBottom: 4,
   },
   categoryText: {
-    fontSize: 10,
+    fontSize: 9,
     fontFamily: 'Inter-Medium',
   },
   limitedBadge: {
@@ -977,12 +928,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 16,
-    gap: 6,
+    gap: 4,
+    flexWrap: 'wrap',
   },
   indicatorDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
   },
   resultSection: {
     borderTopWidth: 1,
@@ -1017,12 +969,21 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular', 
     color: '#1f2937', 
     lineHeight: 24, 
-    marginBottom: 20, 
+    marginBottom: 12, 
     padding: 16, 
     backgroundColor: '#f9fafb', 
     borderRadius: 12, 
     borderWidth: 1, 
     borderColor: '#e5e7eb' 
+  },
+  resultStats: {
+    alignItems: 'flex-end',
+    marginBottom: 16,
+  },
+  resultStatsText: {
+    fontSize: 12,
+    fontFamily: 'Inter-Medium',
+    color: '#6b7280',
   },
   shareButton: { 
     flexDirection: 'row', 
@@ -1055,7 +1016,7 @@ const styles = StyleSheet.create({
     elevation: 5 
   },
   disabledButton: { 
-    opacity: 0.7 
+    opacity: 0.5 
   },
   buttonGradient: { 
     flexDirection: 'row', 
